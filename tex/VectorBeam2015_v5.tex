@@ -1,0 +1,475 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{fontenc,multicol,amsmath,amssymb,comment,graphicx}
+\usepackage{natbib}
+\usepackage{subfig,siunitx,setspace,xcolor}
+
+\addtolength{\hoffset}{-2cm}
+\addtolength{\textwidth}{4cm}
+\addtolength{\voffset}{-2.5cm}
+\addtolength{\textheight}{4cm}
+
+%\usepackage{fancyhdr}
+%\pagestyle{fancy}
+%\fancyhf{}
+%\rhead{Yoonkyung Eunnie Lee, 2015}
+%----------commands----------------------------------%
+\newcommand{\evec}{\mathbf{\hat{e}}}
+\newcommand{\diff}{\mathrm{d}}
+\newcommand{\p}{\partial}
+\newcommand{\rtp}{\rho,\theta,\phi}
+\newcommand{\rtpj}{\rho^{j},\theta^{j},\phi^{j}}
+\newcommand{\rtpl}{\rho^{l},\theta^{l},\phi^{l}}
+\newcommand{\del}{\boldsymbol\nabla}
+%------------------------------------------------------%
+\author{Yoonkyung Eunnie Lee}
+\title{Vector Beams Carrying Orbital Angular Momentum}
+\date{Last updated: \today}
+\begin{document}
+\maketitle
+\thispagestyle{empty} 
+In the Optomechanical Optimization project, vector beams with various angular momentum profiles are used as incident fields.  \texttt{GHBeam.cc} implements the analytical formulas of this note. 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Scalar Solution of the Wave Equation under Paraxial Approximation}
+\subsection{General formalism}
+Scalar wave Equation describes the spatiotemporal variation of a scalar quantity $U$ .
+\begin{equation}\label{eq:Wave}
+    \nabla^2 U(\vec{x},t) = \frac{1}{c^2} \frac{\partial^2 U(\vec{x},t)}{\partial t^2},
+\end{equation}
+Acknowledging harmonic time dependence $e^{\pm i\omega t}$, this simplifies to scalar Helmholtz equation: 
+\begin{equation}\label{eq:HelmHoltz}
+    \nabla^2 U(\vec{x}) + k^2 U(\vec{x})=0.
+\end{equation}
+By specifying the propagation direction in $+z$ and choosing $e^{-i\omega t}$, we can write:
+\begin{equation}
+    U(\vec{x},t) = u(\vec{x}) e^{i(kz-\omega t)}.
+\end{equation}
+Assuming paraxial collimation, 
+    \[ \frac{\p^2}{\p z^2} \left( u(\vec{x}) e^{ikz}\right)=
+    \left( \frac{\p^2 u}{\p z^2} + 2ik \frac{\p u}{\p z} -k^2 u \right) e^{-ikz} 
+    \approx \left( 2ik \frac{\p u}{\p z} -k^2 u \right) e^{-ikz}, 	\] 
+and the paraxial wave equation is constructed as: 
+\begin{equation}\label{eq:ParaxialWave0}
+    \frac{\partial^2 u}{\partial x^2} + \frac{\partial^2 u}{\partial y^2} + 2ik \frac{\partial u}{\partial z} = 0.
+\end{equation}
+Simplifying with transverse Laplacian $\nabla_T=\p_x^2+\p_y^2$, we get:
+\begin{equation}\label{eq:ParaxialWave}
+    \boxed{ 
+    \nabla_T^2 u + 2ik\frac{\p}{\p z}u=0.
+    }
+\end{equation}
+For freely propagating sources, the paraxial approximation is perfectly valid. For beams passing through high NA, modified formulas in the nonparaxial regime should be used. (Orlov, Banzer, ... this will be documented later when we actually use them.)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Simple Gaussian Beam}
+A simple Gaussian Beam is obtained by constructing a solution to eq. \ref{eq:ParaxialWave} whose shape is invariant on propagation. We assume the solution in the following form \begin{equation}
+u(\vec{x})=u_0 e^{\left[ \frac{ikr^2}{2q(z)}\right]} e^{ip(z)}
+\end{equation}
+and find: 
+\begin{equation*}
+e^{ip(z)}=\frac{1}{\sqrt{1+z^2/z_R^2}}e^{-i\Phi(z)},
+\text{  and,  }\;\;\;
+\frac{1}{q(z)}=\frac{1}{R(z)}+\frac{i\lambda}{\pi w^2(z)},
+\end{equation*}
+where:
+\begin{itemize}
+\item[]$r,z$ : radial, axial distance from center axis of the beam
+\item[]$U_0$ : wave amplitude
+\item[]$\Phi(z)= \arctan \left( \frac{z}{z_\mathrm{R}} \right) \ $ : Gouy phase shift
+\item[]$k=2\pi/\lambda$ : wavevector
+\item[]$w(z)$ : radius at which field amplitude drops to $1/e$ of the axial value.
+\begin{itemize}
+\item $w(z) = w_0 \,\sqrt{1+{\left(\frac{z}{z_\mathrm{R}}\right)}^2}\ $, where $w_0=w(0)$ : waist size
+\item $z_\mathrm{R} = \frac{\pi w_0^2}{\lambda} $ : Rayleigh range, ($w(\pm z_\mathrm{R}) = \sqrt{2} w_0.$ ) 
+\item $b = 2 z_\mathrm{R} = \frac{2 \pi w_0^2}{\lambda} \ $ : Beam depth of focus
+\end{itemize}
+\item[]$R(z) = z \left[{ 1+ {\left( \frac{z_\mathrm{R}}{z} \right)}^2 } \right] \ $ : radius of curvature of beam's wavefronts
+\end{itemize}
+In full form, Gaussian scalar wave is written as: 
+\begin{equation}\label{eq:uG}
+\boxed{
+	u(\vec{x}) = U_0  \left[\frac{1}{\sqrt{1+z^2/z_R^2}} e^{ikr^2/2R(z)}\right]e^{-r^2/w(z)^2} e^{-i\Phi(z)} e^{ikz}
+	}
+\end{equation}
+or
+\begin{equation}\label{eq:uG2}
+\boxed{
+	u(\vec{x}) = U_0 \frac{w_0}{w(z)}e^{ikr^2/2R(z)}
+     e^{-r^2/w(z)^2} e^{-i\Phi(z)}e^{ikz}
+	}
+\end{equation}
+
+To construct $U(\vec{x},t)$, we need to multiply $u(\vec{x})$ by $e^{i(kz-\omega t)}$. 
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Laguerre-Gaussian Beam}
+The Laguerre-Gaussian beam can be expressed as: 
+\begin{equation}\label{eq:uLG}
+u_{_{LG}}(r,\phi,z)= C^{LG}_{lp}
+\left(\frac{r \sqrt{2}}{w(z)}\right)^{|l|}
+L_p^{|l|}\left(\frac{2r^2}{w^2(z)}\right) 
+e^{i l \phi} e^{-i(2p+|l|)\Phi(z)} u(\vec{x})
+\end{equation}
+\begin{equation}\label{eq:uLGcart}
+u_{_{LG}}(x,y,z)= C^{LG}_{lp}
+\left(\frac{\sqrt{x^2+y^2} \sqrt{2}}{w(z)}\right)^{|l|}
+L_p^{|l|}\left(\frac{2(x^2+y^2)}{w^2(z)}\right) 
+e^{i l \arctan(y/x)} e^{-i(2p+|l|)\Phi(z)} u(\vec{x})
+\end{equation}
+
+Reference is Allen 1992 (for the formula itself) and Gbur (for additional normalization and matched sign convention). Substituting eq. \ref{eq:uG}, we write:
+\begin{equation}\label{eq:uLGfull}
+\boxed{
+u_{_{LG}}(r,\phi,z)= 
+\left[\frac{C^{LG}_{lp}}{\sqrt{1+z^2/z_R^2}}  e^{ikr^2/2R(z)}\right] 
+e^{-r^2/w(z)^2}
+\left(\frac{r \sqrt{2}}{w(z)}\right)^{|l|}
+L_p^{|l|}\left(\frac{2r^2}{w^2(z)}\right) 
+\;e^{i l \phi}\;
+ e^{-i(2p+|l|+1)\Phi(z)}e^{ikz}
+ }
+\end{equation}
+
+\begin{eqnarray*}\label{eq:uLGfullcart}
+u_{_{LG}}(x,y,z)= 
+\left[\frac{C^{LG}_{lp}}{\sqrt{1+z^2/z_R^2}}  e^{ik(x^2+y^2)/2R(z)}\right] 
+e^{-(x^2+y^2)/w(z)^2}
+\left(\frac{\sqrt{x^2+y^2} \sqrt{2}}{w(z)}\right)^{|l|}\\
+L_p^{|l|}\left(\frac{2(x^2+y^2)}{w^2(z)}\right) 
+\;e^{i l \arctan(y/x)}\;
+ e^{-i(2p+|l|+1)\Phi(z)}e^{ikz}
+ \end{eqnarray*}
+
+where
+\begin{itemize}
+\item[] $l$ : azimuthal index
+\item[] $p$ : radial index, $p\geq 0$ 
+\item[] $C^{LG}_{lp}$ : normalization constant
+\item[] \[C^{LG}_{lp} = \sqrt{\frac{2p!}{\pi w_0^2 (p+\vert l \vert)!}}\]
+\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection*{ $L^l_p$: Associated Laguerre Polynomials}
+\begin{itemize}
+\item definition \[ L^m_p(x)= \frac{e^x x^{-m}}{p!}\frac{\diff^p}{\diff x^p}(x^{m+p}e^{-x}) \]
+\item recurrence relation
+ \[ \sum\limits_{\nu=0}^{n}L_{\nu}^k(x)=L_n^{k+1}(x),
+\;\;\;\;\;
+ L_n^k(x)=L_n^{k+1}(x)-L_{n-1}^{k+1}(x).  \] 
+\item differentiation 
+ \[ \frac{\diff}{\diff x}L_n^k(x) =-L_{n-1}^{k+1}(x)\] 
+\item normalization \[L^{m}_{p}(0)=\frac{(p+m)!}{p!m!} \]
+\end{itemize}    
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Bessel-Gaussian Beam}
+Using the Bessel function of the 1st kind of order m $J_m(\cdot)$, the Bessel-Gaussian beam under paraxial approximation can be written as follows. 
+\begin{equation}
+99
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Scalar Solutions without Paraxial Approximation}
+\section{Complex Source Point representation}
+
+\section{Vector Helmholtz Equation}
+Reference: Stratton, Chapter VII
+
+\subsection{Vector Helmholtz Equation}
+A medium is characterized with the following three relations.
+\begin{center}
+\begin{tabular}{lll}
+$\mathbf{D}=\varepsilon\mathbf{E}$  & $\mathbf{B}=\mu\mathbf{H}$ 
+ & $\mathbf{J}=\sigma\mathbf{E}$ \\ 
+permittivity $\varepsilon$ & permeability $\mu$ & conductivity $\sigma$ \\ 
+\end{tabular} 
+\end{center}
+The wavevector can be expressed in terms of the angular frequency $\omega$ and the three material coefficients $\varepsilon, \mu, \sigma$. 
+\begin{equation}\label{eq:k}
+k^2 = \varepsilon\mu\omega^2+i \sigma \mu\omega,
+\end{equation} 
+The vector Helmholtz equation is:
+\begin{equation}\label{eq:vecHelmholtz}
+\del^2 \mathbf{C} + k^2\mathbf{C}=0,
+\end{equation}
+where $\del^2 \mathbf{C} = \del\del\cdot\mathbf{C}-\del\times\del\times\mathbf{C}$. 
+
+Let the scalar function $\psi$ be a member of a complete set of solutions of the scalar Helmholtz equation,
+\begin{equation}\label{eq:scalarHelmholtz}
+\del^2 \psi + k^2 \psi = 0,
+\end{equation}
+and let $\mathbf{a}$ be any constant vector of unit length. Three independent vector solutions of eq.\ref{eq:vecHelmholtz} can be constructed.\\
+\begin{center}
+\begin{tabular}{ll|l|l}
+construction: &$\mathbf{L} = \del \psi $& $\mathbf{M}= \del \times \mathbf{a}\psi $ & $\mathbf{N}= \frac{1}{k} \del \times \mathbf{M}$\\
+&& $\mathbf{M}=\frac{1}{k} \del \times \mathbf{N}$ & \\
+&& $\mathbf{M}=\mathbf{L}\times\mathbf{a}$ & \\
+\hline
+&& &\\
+properties: &$\del \times \mathbf{L}=0$& $\del\cdot\mathbf{M}=0$ &$\del\cdot\mathbf{N}=0$\\
+&$\del\cdot\mathbf{L}= \del ^2 \psi = -k^2 \psi$&$\mathbf{L}\cdot\mathbf{M}=0$&\\ 
+\end{tabular}
+\end{center}
+
+Presumably any arbitrary wavefunction can be represented as a linear combination of the characteristic vector functions $\mathbf{L}, \mathbf{M}, \mathbf{N}$. 
+
+\subsection{Fields}
+A convenient convention is to express $\mathbf{E}, \mathbf{H}$ only in terms of $\mathbf{M},\mathbf{N}$ and not of $\mathbf{L}$. The vector potential $\mathbf{A}$ is given by a general expression of the form:
+\begin{equation}
+\mathbf{A} = \frac{i}{\omega}\sum\limits_{n} (a_n \mathbf{M}_n + b_n \mathbf{N}_n + c_n \mathbf{L}_n ),
+\end{equation}
+and from $\mu \mathbf{H} = \del \times \mathbf{A}$, we get: 
+\begin{equation}
+\mathbf{E}=-\sum\limits_n (a_n \mathbf{M}_n + b_n \mathbf{N}_n),
+\end{equation}
+\begin{equation}
+\mathbf{H}=-\frac{k}{i\omega\mu}\sum\limits_n (a_n \mathbf{N}_n + b_n \mathbf{M}_n).
+\end{equation}
+The scalar potential $\phi$ can be determined as:
+\begin{equation}
+\phi = - \sum\limits_n c_n \psi_n.
+\end{equation}
+
+\subsection{Rectangular Coordinates}
+A simple scalar solution to use in rectangular coordinates is the plane wave solution. 
+\begin{equation}
+\psi(\mathbf{r},t) = \exp(i \mathbf{k}\cdot\mathbf{r}-i\omega t)
+\end{equation}
+
+\begin{center}
+\begin{tabular}{lll}
+$\mathbf{L}= i \psi \mathbf{k}$ & $\mathbf{M}=i \psi \mathbf{k}\times\mathbf{a}$ & $\mathbf{N}= \frac{1}{k}\psi (\mathbf{k}\times\mathbf{a})\times\mathbf{k}$\\
+\end{tabular}
+\end{center}
+All three vectors are mutually perpendicular here, and $\mathbf{L}$ is a purely longitudinal wave. 
+
+\subsection{Cylindrical Coordinates}
+In cylindrical coordinates, we use the Bessel function, Laguerre function, et cetera to construct $\psi$. 
+Stratton suggests to use $\cos(\phi), \sin(\phi)$ instead of $\exp(i\phi)$. First the $\psi$ function will be written with $\exp(im\phi$ formalism and then converted to sin, cos form. 
+
+\subsubsection{Bessel}
+Use the following scalar function,
+\begin{equation}\label{eq:besspsi}
+\psi_m (r,\phi,z) = J_m(k_t r) \exp(im\phi + i k_z z) ,
+\end{equation}
+where $J_m$ is the mth-order Bessel function. Eq.\ref{eq:besspsi} describes the amplitude distribution of Bessel beams. 
+By taking the arbitrary constant vector $\mathbf{a}$ is the unit vector in $z$ direction, we obtain the following. 
+\begin{align}
+\mathbf{M}_m &= \frac{k_t}{2}\lbrace i(J_{m-1}+J_{m+1} )\hat{r} - (J_{m-1}-J_{m+1})\hat{\phi}\rbrace e^{ik_z z +im\phi}\\
+\mathbf{N}_m &= \frac{k_t}{2k} \lbrace ik_z(J_{m-1}-J_{m+1} )\hat{r} -k_z (J_{m-1}+J_{m+1})\hat{\phi}+2k_t J_m \hat{z} \rbrace e^{ik_z z +im\phi}
+\end{align}
+
+\subsubsection{Laguerre}
+The scalar functions derived for modified Gaussian beams can be $\psi$.
+\begin{equation}
+\psi = u_{_G}, u_{_{LG}}, u_{_{HG}}
+\end{equation}
+
+\subsection{Spherical Coordinates}
+In spherical coordinates, $\psi$ is expressed in terms of $Y_{lm}$, the spherical harmonics. This is documented in detail in GMM notes, so it will be omitted in this section. 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{From Scalar to Vector Solution: $u(\vec{x})\;\;\Rightarrow\;\;\mathbf{E}(\vec{x},t),\mathbf{H}(\vec{x},t)$}
+From the scalar solution to the vector solution, we are given some freedom to choose the electric and magnetic field distributions in space. Polarization is undecided, and the existence of longitudinal fields (parallel to the propagation direction) also changes based on which polarization we choose. The most important constraint here is that the fields must solve the vector Helmholtz equation:
+\begin{equation}\label{eq:VectorHelmholtz}
+\nabla^2 \mathbf{U} + k^2 \mathbf{U} = 0,
+\end{equation}
+where $\boldsymbol\nabla^2$ is the vector Laplacian $ \nabla^2 \mathbf{A}= \del \cdot (\nabla \mathbf{A}) $. Recall that $\nabla \mathbf{A}$ is a tensor. 
+
+\subsection{Vector Field Components of a Simple Gaussian Beam}
+Let us designate a Vector Gaussian Beam to have the following electric field.
+\begin{equation} \label{eq:uGEvec}
+\mathbf{E} (\vec{x},t) = -i \omega 
+\left[ 
+(\alpha \mathbf{\hat{x}} + \beta \mathbf{\hat{y}}) u
++\frac{i}{k} \left( \alpha \frac{\partial u}{\partial x} + \beta \frac{\partial u}{\partial y} \right) \mathbf{\hat{z}} 
+	\right] 	e^{-i\omega t}
+\end{equation}
+The coefficients $\alpha$ and $\beta$ satisfy $\sigma_z=i(\alpha\beta^{\ast} -\beta\alpha^{\ast})$ is the polarization operator with $\sigma_z=0$ for linearly polarized light and $\sigma_z=\pm 1$ for right and left circularly polarized light. 
+
+Substituting the Gaussian Beam formula eq. \ref{eq:uG} into eq. \ref{eq:uGEvec}, the z-component of the electric field can be written as:
+\begin{equation}\label{eq:uGEz}
+E_z(\vec{x},t) =( -i \omega ) \frac{-i}{k} u(\vec{x})\left[
+\frac{2 \alpha x + 2 \beta y}{w^2(z)}
++
+\frac{-i k (\alpha x + \beta y)}{R(z)}
+\right]	e^{-i\omega t}
+\end{equation}
+
+Writing out in the vector form, the electric field can be expressed as:
+\begin{equation}
+\mathbf{E}(\vec{x},t)=(-i\omega) 
+\left[
+\begin{matrix}
+\alpha  \\
+\beta  \\
+\frac{-i}{k}\left[
+\frac{2 \alpha x + 2 \beta y}{w^2(z)}
++
+\frac{-i k (\alpha x + \beta y)}{R(z)}
+\right]
+\\
+\end{matrix}
+\right]
+u(\vec{x})	e^{-i\omega t}
+\end{equation}
+
+
+The magnetic field is obtained from:
+\begin{equation}
+\del \times \mathbf{E} + \frac{\p \mathbf{B}}{\p t}=0.
+\end{equation}
+
+We write ${B_x,B_y,B_z}$ in terms of ${E_x,E_y,E_z}$:
+\begin{equation}
+-(-i\omega)\mathbf{B}(\vec{x},t)=
+\left[
+\begin{matrix}
+\p_y E_z-\p_z E_y \\
+\p_z E_x-\p_x E_z \\
+\p_x E_y-\p_y E_x \\
+\end{matrix}
+\right]
+\end{equation}
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Vector Electric Field Components of Laguerre-Gaussian Beam}
+The vector electric field can be constucted from the scalar field $u_{_{LG}}(\vec{x})$ using the following equation from Allen 1996:
+\begin{equation}\label{eq:uLGEvec}
+\mathbf{E} (\vec{x},t) = -i \omega 
+\left[ 
+(\alpha \mathbf{\hat{x}} + \beta \mathbf{\hat{y}}) u_{_{LG}} 
++\frac{i}{k} \left( \alpha \frac{\partial u_{_{LG}}}{\partial x} + \beta \frac{\partial u_{_{LG}}}{\partial y} \right) \mathbf{\hat{z}} 
+	\right] 	e^{-i\omega t}
+\end{equation}
+
+Therefore,
+\begin{align*}
+E_{x}(\vec{x},t)  = \alpha (-i\omega)&  u_{_{LG}}(\vec{x}) e^{-i\omega t}\\
+E_{y}(\vec{x},t)  = \beta (-i\omega)&  u_{_{LG}}(\vec{x}) e^{-i\omega t}\\
+E_{z}(\vec{x},t)  =\;\;(-i\omega) &u_{_{LG}}(\vec{x}) e^{-i\omega t}\\
+& \frac{i}{k} \left[ \left(\frac{ik}{R(z)} - \frac{2}{w^2(z)}  +\frac{|l|}{r^2} 
++ \frac{L^{|l|+1}_{p-1}(2r^2/w^2(z))}{L^{|l|}_{p}(2r^2/w^2(z))}\frac{\sqrt{2}}{r w(z)}
+\right)(\alpha x + \beta y)
+	+ \frac{ il(\beta x-\alpha y)}{r^2}
+	\right] .
+\end{align*}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Vector Magnetic Field Components of Laguerre-Gaussian Beam}
+From 
+\begin{equation*}
+\del \times \mathbf{E} + \frac{\p \mathbf{B}}{\p t}=0,
+\end{equation*}
+we can write the magnetic vector components as: 
+\begin{align*}
+B_x = \frac{1}{i\omega}\left(\frac{\p E_z}{\p y} - \frac{\p E_y}{\p z} \right)
+\\
+B_y = \frac{1}{i\omega}\left(\frac{\p E_x}{\p z} - \frac{\p E_z}{\p x} \right)
+\\
+B_z = \frac{1}{i\omega}\left(\frac{\p E_y}{\p x} - \frac{\p E_x}{\p y} \right)
+\end{align*}
+
+The analytical formulas are constructed and checked using Mathematica, and then the incomplete \texttt{C$++$} form out of Mathematica's \texttt{CForm} function is automatically corrected using \texttt{CFormChange.sh} where string manipulation is performed. 
+
+\subsection{Removing singularities}
+Between \texttt{OptTorque\_v11.cc} and \texttt{OptTorque\_v13.cc}, the biggest issue was implementing the magnetic field vectors and removing unphysical values. 
+
+Spatial derivative of $u_{_{LG}}$
+
+
+\subsection{Choice of Polarization}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline 
+Pol: & XP & YP & RCP & LCP\\ 
+\hline 
+$(\alpha,\beta)$ & $(1,0)$ & $(0,1)$ & $(1,i)/\sqrt{2}$ & $(1,-i)/\sqrt{2}$\\ 
+\hline 
+$\sigma_z$ & 0 & 0 & 1 & -1 \\ 
+\hline 
+\end{tabular} 
+
+\end{center}
+
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Solution using the Vector Potential $\mathbf{A}$}
+in Allen 1992, the magnetic vector potential $\mathbf{A}$ is described in terms of the scalar Laguerre-Gaussian beam solution of eq.(\ref{eq:uLGEvec}). 
+\begin{equation}\label{eq:A}
+\mathbf{A}= u_{_{LG}}(r,\phi,z)e^{ikz}\vec{x}
+\end{equation}
+For a while I was confused how $\mathbf{A}$ is supposed to be chosen, and why people sometimes use eq.\ref{eq:Efield}
+The wave equation is restated here, without assuming harmonic time dependence:
+\begin{equation}\label{eq:waveA}
+\nabla^2 \mathbf{A} = \frac{1}{c^2} \frac{\p^2 \mathbf{A}}{\p t^2}.
+\end{equation}
+
+Recall the following basics too, using the Lorentz gauge to relate $\Phi$ and $\mathbf{A}$. 
+\begin{align*}
+\del\cdot\mathbf{E}&=0\\
+\del\cdot\mathbf{A}&+\frac{1}{c^2}\frac{\p \Phi}{\p t}=0\\
+\mathbf{E}&=-\del\Phi-\frac{\p \mathbf{A}}{\p t}\\
+\mathbf{B}&=\del\times\mathbf{A}
+\end{align*}
+
+For mathematical convenience, we will choose $\mathbf{A}$ to be parallel to positive x-direction. The vector Laplacian and the divergence can be simplified as the following:
+\[
+\del\cdot\mathbf{A}= \frac{\p A_j}{\p x},\;\;\;\;\;
+	(\nabla^2 \mathbf{A})_j= \nabla^2 A_j,
+\]
+and eq. \ref{eq:waveA} is transformed into a scalar equation 
+\begin{equation}\label{eq:waveAj}
+\nabla^2 A_j = \frac{1}{c^2} \frac{\p^2 A_j}{\p t^2}.
+\end{equation}
+Now we compute the scalar potential $\Phi$ and the EM fields as the following. 
+
+\begin{equation}\label{eq:ScalarPot}
+\Phi=-\frac{c^2}{(-i\omega)}\del\cdot\mathbf{A}=
+\frac{c^2}{(i\omega)}\frac{\p A_j}{\p x}
+\end{equation}
+We can simplify the vector divergence into 
+
+\begin{equation}\label{eq:Efield}
+\mathbf{E}=-\del\Phi-\frac{\p \mathbf{A}}{\p t}=-\del\Phi-(-i\omega) \mathbf{A}
+\end{equation}
+
+\begin{equation}\label{eq:Bfield}
+\mathbf{B}=\del\times\mathbf{A}= \frac{\p A_x}{\p z}\hat{y}+\frac{\p A_x}{\p y}\hat{z}
+\end{equation}
+and for material in vacuum, 
+\[
+\mathbf{H}=\frac{1}{\mu_0}\mathbf{B}
+\]
+
+\section{Reference}
+Gbur, Mathematical Methods for Optical Physics and Engineering, Chapter 18
+
+
+\clearpage
+
+%% References %%
+%\bibliography{fundref}{}
+%\bibliographystyle{plain}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\section{Test for citations and figures}
+%reference test\citep{allen2003optical}
+%figure test\\
+%\begin{figure}
+%\begin{center}
+%\includegraphics[width = 25mm]{AgAuCucolors.png}\end{center}
+%\caption{This is the caption at the bottom of the image}\label{fig:Aucolor}
+%\end{figure}
+% refer to this Figure (\ref{fig:Aucolor}) \\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}

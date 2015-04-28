@@ -1,0 +1,196 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{fontenc,multicol,amsmath,amssymb,comment,graphicx}
+\usepackage{natbib}
+\usepackage{subfig,siunitx,setspace,xcolor}
+
+\addtolength{\hoffset}{-2cm}
+\addtolength{\textwidth}{4cm}
+\addtolength{\voffset}{-2.5cm}
+\addtolength{\textheight}{4cm}
+
+%----------commands----------------------------------%
+\newcommand{\diff}{\mathrm{d}}
+\newcommand{\p}{\partial}
+
+\newcommand{\Qmat}{\underline{\underline{\mathbf{Q}}}}
+\newcommand{\Mmat}{\underline{\underline{\mathbf{M}}}}
+\newcommand{\Cvec}{\underline{\mathbf{C}}}
+\newcommand{\Fvec}{\underline{\mathbf{F}}}
+%------------------------------------------------------%
+\author{Yoon Kyung Eunnie Lee}
+\title{Optimization using NLOPT}
+\date{Created: November 15, 2014 \\ Last updated: \today}
+\begin{document}
+\maketitle
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{multicols}{2}
+\section{\large{Definition of the BEM problem}}
+\subsection*{BEM Matrix M}
+The first meeting reviewed the definition and size of the matrices (and vectors) that constitute the BEM problem.
+The surface current in response to an input field is obtained from: 
+\begin{subequations} 
+	\begin{align}
+		&\Mmat\; \Cvec =\Fvec,		\label{eq:1}\\
+		&\Cvec=\Mmat^{-1} \Fvec. 	\label{eq:current}		
+	\end{align}	
+\end{subequations}
+where the surface current $\Cvec$ and input field $\Fvec$ are vectors of length 2N, where N is the number of edges in the mesh. $ \Mmat = \Mmat^{T}. $  is the symmetric BEM matrix. (computed using SCUFF) 
+\textit{Note: Avoid using matrix inversion whenever possible. For example, avoid $\Mmat^{-1}$. }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\subsection*{Power/Force/Torque matrix Q}
+For power, force, and torque, BEM computes them via the PFT matrix $\Qmat$, which obeys \[\Qmat=\Qmat^{\dagger},\] where $\Qmat^{\dagger} = (\overline{\Qmat})^{T}$ denotes complex conjugate. $\Mmat$ and $\Qmat_{OPFT}$ are independent of the incident field.
+
+ 	\section{\large{FOM}}
+ 	\subsection*{Definition}
+The second meeting reviewed how to obtain the scalar value \textit{Figure of Merit} (FOM) and its gradient. The FOM is obtained from $\Qmat$ as:
+\begin{equation} 	\label{eq:FOM}
+	FOM = \Cvec^{\dagger}\Qmat\;\Cvec,
+\end{equation}
+where the $\Cvec$ is obtained from eq. \ref{eq:1}. 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\subsection*{Differential of FOM}
+The differential ($\delta$, also called 'grad') of FOM can be obtained from applying the gradient to eq. \ref{eq:1}:
+\begin{subequations}
+\begin{align}
+ \delta( \Mmat\; \Cvec = \delta \Fvec )  \\
+  \Mmat\; \delta\Cvec = \delta \Fvec  
+\end{align}
+Using $\delta(\Cvec^{\dagger})=(\delta\Cvec)^{\dagger}$, 
+\begin{align*}
+\delta(FOM) &= \delta(\Cvec^{\dagger}\Qmat\;\Cvec)\\
+&= \delta\Cvec^{\dagger} \Qmat\;\Cvec + \Cvec^{\dagger}\Qmat\;\delta(\Cvec)\\
+&= \delta\Fvec^{\dagger} (\Mmat^{-1})^{\dagger} \Qmat\;\Cvec + \Cvec^{\dagger} \Qmat\;\Mmat^{-1}\delta\Fvec
+\end{align*}
+\begin{equation}
+\therefore\;\delta(FOM) = \delta\Fvec^{\dagger} [(\Mmat^{-1})^{\dagger} \Qmat\;\Cvec] + [\Cvec^{\dagger} \Qmat\;\Mmat^{-1}] \delta\Fvec. \label{eq:delFOM}
+\end{equation}
+\end{subequations}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\large{Adjoint Current}}
+From eq. \ref{eq:delFOM}, 
+The terms inside the brackets can be grouped together and computed in terms of the adjoint current $\Cvec_A$ to avoid matrix inversion. Let us write:
+\begin{subequations}
+\begin{align}
+\Cvec_A^T =& [\Cvec^{\dagger} \Qmat\;\Mmat^{-1}]\\
+\Cvec_A =& [\Cvec^{\dagger} \Qmat\;\Mmat^{-1}]^T = \Mmat^{-1} \overline{\Qmat} \; \overline{\Cvec}  \\
+\overline{\Cvec_A}=& (\overline{\Mmat^{-1}})\Qmat\;\Cvec = (\Mmat^{-1})^{\dagger}\Qmat\;\Cvec
+\end{align}
+\begin{equation}
+\therefore\;\;\boxed{\Mmat \; \Cvec_A = \overline{\Qmat} \;\overline{\Cvec}}\label{eq:Cadj}
+\end{equation}
+\end{subequations}
+Notice the similarity between eq. \ref{eq:Cadj} and $\Mmat \; \Cvec = \Fvec$. Both can be solved with LU factorization. eq. \ref{eq:delFOM} now becomes:
+\begin{subequations}
+\begin{equation}
+\delta(FOM)=\delta\Fvec^{\dagger}\; [\;\overline{\Cvec_A}\;] + [\;\Cvec_A^T\;] \; \delta\Fvec
+\end{equation}
+\begin{equation}\label{eq:delFOM2}
+\therefore \;\; \boxed{\delta(FOM) = 2 \cdot Re\left[\; \Cvec_A^T \;\delta\Fvec\;\right].}
+\end{equation}
+\end{subequations}
+Using the complex vectors $\Fvec$ and $\Fvec^{\dagger}$ separately, we get two differential equations for FOM.
+\begin{subequations}
+\begin{align}
+	\left( \frac{\delta (FOM)}{\delta(\Fvec)} = \Cvec_A^T \right) \label{eq:gradFOMgradF}\\
+	\left( \frac{\delta (FOM)}{\delta(\Fvec^{\dagger})}= \overline{\Cvec_A}\right)\label{eq:gradFOMgradFconj}
+\end{align}
+\end{subequations}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\large{Input Field Decomposition}}
+\subsection*{Construction of $\Fvec$}
+The total incident field vector $\Fvec$ is computed inside BEM in the following way:
+\begin{subequations}
+\begin{equation}
+F_{i} =\left\langle \boldsymbol\phi^{inc},\boldsymbol\beta_{i}\right\rangle.
+\end{equation}
+In integral form, this is equivalent to: 
+\begin{equation}\label{eq:FveciInt}
+\boxed{F_{i} = \int_{S_i}\;\; \boldsymbol\phi^{inc}\cdot \boldsymbol\beta_{i} \;\diff A,\;\;\;(i=1..\text{2N})}
+\end{equation}
+\begin{equation}\label{eq:FvecInt}
+\boxed{\Fvec = \int_{S}\;\; \boldsymbol\phi^{inc}\cdot \underline{\boldsymbol\beta} \;\diff A,}
+\end{equation}
+\end{subequations}
+where $\boldsymbol\phi^{inc}$ is the total incident field in $(x,y,z)$, and $\boldsymbol\beta_{i}$ is the unit normal for surface current in $(x,y,z)$, per edge $i=1$..2N. Keep in mind that $\boldsymbol\beta_{i}$ and $\boldsymbol\phi^{inc}$ are vectors in 3D, while $\Fvec$ is a 2N-dimensional vector, and $\underline{\boldsymbol\beta}$ is a (2N$\times$3) matrix. 
+
+\subsection*{Decomposition of $\boldsymbol\phi^{inc}$ }
+The incident field $\boldsymbol\phi^{inc}$ can be expanded into any orthonormal basis $\mathbf{Y}^{lm}$.
+\begin{equation}
+\boldsymbol\phi^{inc}=\sum c_{^{lm}}\;\mathbf{Y}^{lm}
+\end{equation}
+Both $\boldsymbol\phi$ and $\mathbf{Y}$ are spatial vectors in 3D. 
+
+\subsection*{Decomposition of $\Fvec$ }
+The 2N-dimensional incident field vector $\Fvec$ is a superposition of the $\Fvec^{lm}$ vectors.
+\begin{equation}
+\Fvec = \sum c_{^{lm}}\;\Fvec^{lm},
+\end{equation}
+Each $\Fvec^{lm}$ is separately computed using the same integration method of eq. \ref{eq:FveciInt}:
+\begin{subequations}
+\begin{equation}
+F^{lm}_{i} = \left\langle \mathbf{Y}^{lm},\boldsymbol\beta_{i}\right\rangle.
+\end{equation}
+In integral form, this is equivalent to: 
+\begin{equation}\label{eq:FlmiInt}
+\boxed{F^{lm}_{i}= \int \mathbf{Y}^{lm} \cdot \boldsymbol\beta_{i} \; \diff A,\;\;\;(i=1..\text{2N})}
+\end{equation}
+\begin{equation}\label{eq:FlmInt}
+\boxed{\Fvec^{lm}= \int \mathbf{Y}^{lm} \cdot \underline{\boldsymbol\beta} \; \diff A.}
+\end{equation}
+\end{subequations}
+
+\subsection*{Decomposition of FOM}
+$\delta(FOM)$ can now be computed with respect to the change in each orthonormal mode $\mathbf{Y}^{lm}$. 
+\begin{align*}
+	\delta(FOM) &= 2 \cdot Re\left[\; \Cvec_A^T \;\delta\Fvec\;\right]\\
+    &= 2 \cdot Re\left[\; \Cvec_A^T  \sum \delta \left(  c_{^{lm}} \Fvec^{lm}\right) \right]\\	
+	&= 2 \cdot Re\left[\; \delta c_{^{lm}}  \left(\sum \Cvec_A^T \;\Fvec^{lm} \right)\;\right] \\
+	&= 2 \cdot Re\left[\;\delta 
+c_{^{lm}} \left( \sum  \Cvec_A^T\;\int \mathbf{Y}^{lm} \cdot \underline{\boldsymbol\beta} \; \diff A \right) \;\right]
+\end{align*}
+Therefore, 
+\begin{subequations}
+\begin{equation}\label{eq:gradFOMgradclmInt}
+\frac{\delta(FOM)}{\delta c_{^{lm}} } = 2 \cdot Re\left[\; \Cvec_A^T \;\Fvec^{lm}  \;\right],
+\end{equation}
+\begin{equation}\label{eq:gradFOMgradclm}
+\frac{\delta(FOM)}{\delta c_{^{lm}} } = 2 \cdot Re\left[\; \Cvec_A^T  \int \mathbf{Y}^{lm} \cdot \underline{\boldsymbol\beta} \; \diff A  \;\right].
+\end{equation}
+\end{subequations}
+
+Recall that the surface current vector $\Cvec$ and the adjoint current vector $\Cvec_A$ depend on the incident field. For the computation of $FOM$, we use $\Cvec$ and $\Cvec_A$ computed using the total incident field vector $\Fvec$. 
+
+%
+%\section{\large{Questions}}
+%
+%\textbf{eq. \ref{eq:FveciInt}: Area of integration? }
+%
+%\textbf{ The constants $c_{^{lm}}$ are real. Is there an equivalent expression for eq. \ref{eq:gradFOMgradF}, \ref{eq:gradFOMgradFconj} ?} 
+
+\section{\large{Input to NLOPT}}
+Steven suggested on 2015.03.16 that the following function be constructed:
+ 
+\texttt{
+double objective (int n, double *c)\{
+	Function to Compute FOM
+	\begin{itemize}
+	\item compute RHS
+	\item sol=(Existing A)$\setminus$ rhs
+	\item return FOM  
+	\end{itemize} \} 
+ }
+where *c is an array of coefficients $c_{lp}$. (Steven said, why don't you start with 25 coeff.s, 5 by 5? You would need real and imaginary parts. There is no meaning in trying to make sense of different force/torque from modes. go straight to optimizing. )
+
+\end{multicols}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\clearpage
+
+%% References %%
+%\bibliography{fundref}{}
+%\bibliographystyle{plain}
+
+\end{document}
