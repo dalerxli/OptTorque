@@ -1,6 +1,6 @@
 /***************************************************************
  * OptTorque.cc -- Compute Power,Force,Torque 
- * Last updated on 2015.03.15, v11
+ * Last updated on 2015.04.16, v14
  *
  ***************************************************************
  * v5 & v55 & v6: Functional version of OptTorque.cc 
@@ -11,14 +11,19 @@
  * updates to v10: Gouy Phase corrected
  * updates to v11: GetIntegratedIntensity added 
  * updates to v12: Intensity multiplier is added 
- *
+ * updates to v13: GLBeam Magnetic field corrected, Radial/Azimuthal
+ ***************************************************************
+ * updates to v14: VectorBeam Orthogonal Field Expansion Implemented
+ * From v14, Vector Bessel Beams are used as the expansion basis.
  ***************************************************************/
+
 #include <stdio.h>
 #include <math.h>
 #include <complex>
 #include <stdarg.h>
 #include <fenv.h>
 
+#include "VBeam.h"
 #include "GHBeam.h"
 #include "OptTorque.h"
 
@@ -29,20 +34,18 @@
 #define MAXGB    1     // max number of gaussian beams
 #define MAXGLB   10    // max number of GLBeams 
 #define MAXGHB   10    // max number of GHBeams
+#define MAXVB    1     // max number of VBeams 
 #define MAXPS    10    // max number of point sources
 #define MAXFREQ  10    // max number of frequencies
 #define MAXEPF   10    // max number of evaluation-point files
 #define MAXFVM   10    // max number of field visualization meshes
 #define MAXCACHE 10    // max number of cache files for preload
-
 #define MAXSTR   1000
 
-using namespace scuff;
 
 /***************************************************************/
-/***************************************************************/
-/***************************************************************/
-// These static declarations are redundant. 
+// These static declarations are called in VisualizeFields
+// which is currently not used .
 static char *FieldFuncs=const_cast<char *>(
  "|Ex|,|Ey|,|Ez|,"
  "sqrt(|Ex|^2+|Ey|^2+|Ez|^2),"
@@ -54,19 +57,19 @@ static const char *FieldTitles[]=
   "|Hx|", "|Hy|", "|Hz|", "|H|",
  };
 
-#define NUMFIELDFUNCS 8
+#define NUMFIELDFUNCS 8// used in VisualizeFields
+
+using namespace scuff;
 /***************************************************************/
-/***************************************************************/
-/***************************************************************/
+double GetIntegratedIntensity(RWGGeometry *G, 
+                              int SurfaceIndex, HVector *RHSVector); 
 //void VisualizeFields(RWGGeometry *G, IncField *IF, HVector *KN,
 //                     cdouble Omega, char *MeshFileName);
 //double **AllocateByEdgeArray(RWGGeometry *G, int ns);
 //void ProcessByEdgeArray(RWGGeometry *G, int ns, cdouble Omega,
 //                        double **ByEdge);
+/***************************************************************/
 
-/***************************************************************/
-/***************************************************************/
-/***************************************************************/
 int main(int argc, char *argv[])
 {  
   /***************************************************************/
@@ -87,17 +90,21 @@ int main(int argc, char *argv[])
   double gbCenter[3*MAXGB];          int ngbCenter;
   double gbWaist[MAXGB];             int ngbWaist;
 //
-  double ghbWaist[MAXGHB];            int nghbWaist; 
-  int HM[MAXGHB];                     int ngHM;
-  int HN[MAXGHB];                     int ngHN; 
+  double ghbWaist[MAXGHB];           int nghbWaist; 
+  int HM[MAXGHB];                    int ngHM;
+  int HN[MAXGHB];                    int ngHN; 
 
-  double glbWaist[MAXGLB];            int nglbWaist;
-  char *glbpolname[MAXGLB];              int nglbpolname; 
-  double glbCenter[3*MAXGLB];          int nglbCenter;
-  double glbDir[3*MAXGLB];             int nglbDir;
-  int P[MAXGLB];                      int nglP; 
-  int L[MAXGLB];                      int nglL; 
-  double glbI0[MAXGLB];               int nglbI0; 
+  double glbWaist[MAXGLB];           int nglbWaist;
+  char *glbpolname[MAXGLB];          int nglbpolname; 
+  double glbCenter[3*MAXGLB];        int nglbCenter;
+  double glbDir[3*MAXGLB];           int nglbDir;
+  int P[MAXGLB];                     int nglP; 
+  int L[MAXGLB];                     int nglL; 
+  double glbI0[MAXGLB];              int nglbI0; 
+//
+  int VL[MAXVB];                     int nVL; 
+  double aIn[MAXVB];                 int naIn;
+  char abFile=0;                     
 //
   double psLoc[3*MAXPS];             int npsLoc;
   cdouble psStrength[3*MAXPS];       int npsStrength;
@@ -148,14 +155,16 @@ int main(int argc, char *argv[])
      {"pwDirection",  PA_DOUBLE,  3, MAXPW, (void *)pwDir,   &npwDir,  "plane wave direction"},
      {"pwPolarization", PA_CDOUBLE, 3, MAXPW, (void *)pwPol, &npwPol,  "plane wave polarization"},
 //
-//     {"GBeamMode", PA_INT,     1, 1, (void *)&GBeamMode,     0,  "Beam Mode Index, 1:Gauss-Hermite, 2:Gauss-Legendre"},
+     {"VL",        PA_INT,     1, MAXVB, (void *)VL,            &nVL,   "VBeam mode index, if(-5<VL<5), singlemode; else, multimode"},
+     {"aIn",       PA_DOUBLE,  1, MAXVB, (void *)aIn,           &naIn,  "VBeam aperture angle aIn"},
+     {"abFile",    PA_STRING,  1, MAXVB, (void *)&abFile,       0,      "VBeam .ab coefficient file"}, 
 //
      {"HM",        PA_INT,     1, MAXGHB, (void *)HM,       &ngHM,  "Hermite(x) M parameter"},
      {"HN",        PA_INT,     1, MAXGHB, (void *)HN,       &ngHN,  "Hermite(y) N parameter"},
      {"ghbWaist",  PA_DOUBLE,  1, MAXGHB, (void *)ghbWaist, &nghbWaist, "Hermite beam waist"},
 //
-     {"P",         PA_INT,     1, MAXGLB, (void *)P,        &nglP,  "Laguerre P(radial) parameter"},
-     {"L",         PA_INT,     1, MAXGLB, (void *)L,        &nglL,  "Laguerre L(azimuthal) parameter"},
+     {"P",         PA_INT,     1, MAXGLB, (void *)P,        &nglP,"Laguerre P(radial) parameter"},
+     {"L",         PA_INT,     1, MAXGLB, (void *)L,        &nglL,"Laguerre L(azimuthal) parameter"},
      {"glbWaist",  PA_DOUBLE,  1, MAXGLB, (void *)glbWaist, &nglbWaist, "Laguerre beam waist"},
      {"glbI0",     PA_DOUBLE,  1, MAXGLB, (void *)glbI0, &nglbI0, "Laguerre beam Intensity Factor"},
      {"glbpolname", PA_STRING, 1, MAXGLB, (void *)&glbpolname, &nglbpolname, "Laguerre beam polarization name, one of : xp, yp, rcp, lcp, radial, azimuthal "},
@@ -234,11 +243,27 @@ int main(int argc, char *argv[])
    ErrExit("numbers of --gbPolarization, --gbDirection, --gbCenter, and --gbWaist options must agree ");
   if ( npsLoc!=npsStrength )
    ErrExit("numbers of --psLocation and --psStrength options must agree");
+  if ( nVL!=naIn )
+   ErrExit("numbers of --VL and --aIn options must agree");
   if ( nglbI0 != nglbWaist || nglbWaist!=nglbpolname || nglbpolname!=nglP || nglP!=nglL )
    ErrExit("numbers of --glbI0, --glbpolname, --P, --L, and --glbWaist options must agree ");
 
   IncField *IFDList=0, *IFD;
-  int npw, ngb, nps, nglb, nghb; 
+  int npw, ngb, nps, nglb, nghb, nvb; 
+  // construct VBeam 
+  for(nvb=0; nvb<nVL; nvb++)
+    {
+      if(VL[nvb]<=LMAX && VL[nvb]>=-LMAX) //singlemode
+        IFD=new VBeam(VL[nvb],aIn[nvb]); 
+      else{                     //multimode      
+        VL[nvb]= 1; //Set VL equal to 1 for now 
+        IFD=new VBeam(VL[nvb],aIn[nvb]); 
+        // reading in abFile is not constructed yet 
+      }
+      IFD->Next=IFDList; 
+      IFDList=IFD; 
+    };
+
   for(npw=0; npw<npwPol; npw++)
    { IFD=new PlaneWave(pwPol + 3*npw, pwDir + 3*npw);
      IFD->Next=IFDList;
@@ -258,7 +283,6 @@ int main(int argc, char *argv[])
       IFD->Next=IFDList;
       IFDList=IFD;       
     }; 
-
    for(nglb=0; nglb<nglP; nglb++) 
     { printf("GLBeam being prepared\n");
       GLBeamInit = new GLBeam(P[nglb],L[nglb],glbWaist[nglb],glbI0[nglb],glbpolname[nglb]); 
@@ -360,7 +384,7 @@ int main(int argc, char *argv[])
   //  double **ByEdge = (PlotPFTFlux ? AllocateByEdgeArray(SSD->G, 0) : 0);
   /*******************************************************************/
   char IFilename[MAXSTR];
-  snprintf(IFilename,MAXSTR,"Intensity_%s.dat",GeoFileBase);  
+  snprintf(IFilename,MAXSTR,"%s_Intensity.dat",GeoFileBase);  
   FILE *fIntensity=fopen(IFilename,"w"); 
   fprintf(fIntensity,"Omega, Intensity Integrated\n"); 
   fclose(fIntensity);
@@ -431,7 +455,7 @@ int main(int argc, char *argv[])
      G->AssembleRHSVector(Omega, SSD->kBloch, IFDList, KN);
 
      double Intensity=GetIntegratedIntensity(G, 0, KN);
-     printf("Integrated intensity=%e.\n",Intensity);
+     //printf("Integrated intensity=%e.\n",Intensity);
      fIntensity=fopen(IFilename,"a");
      fprintf(fIntensity,"%s   %e\n",OmegaStr,Intensity); 
      fclose(fIntensity); 
@@ -538,9 +562,63 @@ int main(int argc, char *argv[])
   delete KN;
   delete G;
 
-  printf("Thank you for your support.\n");
+  printf("OptTorque finished.\n");
 }//end main 
 
+double GetIntegratedIntensity(RWGGeometry *G, int SurfaceIndex, HVector *RHSVector)
+{
+  RWGSurface *S = G->Surfaces[SurfaceIndex];
+  bool IsPEC    = S->IsPEC;
+  int BFOffset  = G->BFIndexOffset[SurfaceIndex];
+  int NE        = S->NumEdges;
+  int NBF       = IsPEC ? NE : 2*NE;
+
+  /***************************************************************/
+  /* construct and LU-factorize the overlap matrix               */
+  /***************************************************************/
+  HMatrix *M=new HMatrix(NBF, NBF, RHSVector->RealComplex);
+  M->Zero();
+  Log("GetIntegratedIntensity: Assembling S");
+  for(int ne=0; ne<S->NumEdges; ne++)
+   for(int nep=ne; nep<S->NumEdges; nep++)
+    { 
+      double OVLP=S->GetOverlap(ne, nep);
+      if (IsPEC)
+       { M->SetEntry( ne,  nep, OVLP);
+         M->SetEntry( nep, ne,  OVLP);
+       }
+      else
+       { 
+         M->SetEntry( 2*ne, 2*nep, OVLP);
+         M->SetEntry( 2*nep, 2*ne, OVLP);
+
+         M->SetEntry( 2*ne+1, 2*nep+1, OVLP);
+         M->SetEntry( 2*nep+1, 2*ne+1, OVLP);
+       };
+    };
+  M->LUFactorize();
+
+  HVector *V=new HVector(NBF, RHSVector->RealComplex);
+  HVector *MInvV=new HVector(NBF, RHSVector->RealComplex);
+  for(int nbf=0; nbf<NBF; nbf++)
+   { V->SetEntry(nbf, RHSVector->GetEntry(BFOffset+nbf));
+     MInvV->SetEntry(nbf, RHSVector->GetEntry(BFOffset+nbf));
+   };
+  M->LUSolve(MInvV);
+
+  double Intensity=0.0;
+  for(int nbf=0; nbf<NBF; nbf++)
+   Intensity += real( conj(V->GetEntry(nbf)) * MInvV->GetEntry(nbf) );
+  
+  delete M;
+  delete V;
+  delete MInvV;
+
+  return ZVAC*ZVAC*Intensity;
+/********************************************************************/
+/* return 0 if X lies outside the triangle with the given vertices, */
+/* or a positive integer otherwise.                                 */
+}//end getintegratedintensities
 
 void VisualizeFields(RWGGeometry *G, IncField *IF, HVector *KN,
                      cdouble Omega, char *MeshFileName)
