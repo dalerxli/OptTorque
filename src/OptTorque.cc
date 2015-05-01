@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 //
   int VL[MAXVB];                     int nVL; 
   double aIn[MAXVB];                 int naIn;
-  char abFile=0;                     
+  char *PARMMatrixFile=0;                     
 //
   double psLoc[3*MAXPS];             int npsLoc;
   cdouble psStrength[3*MAXPS];       int npsStrength;
@@ -155,9 +155,9 @@ int main(int argc, char *argv[])
      {"pwDirection",  PA_DOUBLE,  3, MAXPW, (void *)pwDir,   &npwDir,  "plane wave direction"},
      {"pwPolarization", PA_CDOUBLE, 3, MAXPW, (void *)pwPol, &npwPol,  "plane wave polarization"},
 //
-     {"VL",        PA_INT,     1, MAXVB, (void *)VL,            &nVL,   "VBeam mode index, if(-5<VL<5), singlemode; else, multimode"},
-     {"aIn",       PA_DOUBLE,  1, MAXVB, (void *)aIn,           &naIn,  "VBeam aperture angle aIn"},
-     {"abFile",    PA_STRING,  1, MAXVB, (void *)&abFile,       0,      "VBeam .ab coefficient file"}, 
+     {"PARMMatrix", PA_STRING,  1, 1, (void *)&PARMMatrixFile, 0, "VParameters file"},
+     {"VL",        PA_INT,     1, MAXVB, (void *)VL,            &nVL,   "VBeam mode for Single Radial Mode"},
+     {"aIn",       PA_DOUBLE,  1, MAXVB, (void *)aIn,           &naIn,  "VBeam aperture angle for Single Radial Mode"},
 //
      {"HM",        PA_INT,     1, MAXGHB, (void *)HM,       &ngHM,  "Hermite(x) M parameter"},
      {"HN",        PA_INT,     1, MAXGHB, (void *)HN,       &ngHN,  "Hermite(y) N parameter"},
@@ -250,25 +250,28 @@ int main(int argc, char *argv[])
 
   IncField *IFDList=0, *IFD;
   int npw, ngb, nps, nglb, nghb, nvb; 
+
   // construct VBeam 
-  for(nvb=0; nvb<nVL; nvb++)
+  HMatrix *PARMMatrix = 0;
+  if (PARMMatrixFile) {      //if PARMMatrix is received 
+    PARMMatrix=new HMatrix(PARMMatrixFile, LHM_TEXT); 
+    IFD=new VBeam(PARMMatrix);     
+    IFD->Next=IFDList; 
+    IFDList=IFD; 
+  }
+  for(nvb=0; nvb<nVL; nvb++) //if VL and aIn are received
     {
-      if(VL[nvb]<=LMAX && VL[nvb]>=-LMAX) //singlemode
-        IFD=new VBeam(VL[nvb],aIn[nvb]); 
-      else{                     //multimode      
-        VL[nvb]= 1; //Set VL equal to 1 for now 
-        IFD=new VBeam(VL[nvb],aIn[nvb]); 
-        // reading in abFile is not constructed yet 
-      }
+      IFD=new VBeam(VL[nvb],aIn[nvb]); 
       IFD->Next=IFDList; 
       IFDList=IFD; 
     };
-
+  //
   for(npw=0; npw<npwPol; npw++)
    { IFD=new PlaneWave(pwPol + 3*npw, pwDir + 3*npw);
      IFD->Next=IFDList;
      IFDList=IFD;
    };
+  //
   for(ngb=0; ngb<ngbCenter; ngb++)
    { IFD=new GaussianBeam(gbCenter + 3*ngb, gbDir + 3*ngb, gbPol + 3*ngb, gbWaist[ngb]);
      IFD->Next=IFDList;
