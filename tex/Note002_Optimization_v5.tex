@@ -3,7 +3,7 @@
 \usepackage{fontenc,multicol,amsmath,amssymb,comment,graphicx}
 \usepackage{natbib}
 \usepackage{subfig,siunitx,setspace,xcolor}
-
+\usepackage{listings}
 \addtolength{\hoffset}{-2cm}
 \addtolength{\textwidth}{4cm}
 \addtolength{\voffset}{-2.5cm}
@@ -169,21 +169,24 @@ Recall that the surface current vector $\Cvec$ and the adjoint current vector $\
 %
 %\textbf{ The constants $c_{^{lm}}$ are real. Is there an equivalent expression for eq. \ref{eq:gradFOMgradF}, \ref{eq:gradFOMgradFconj} ?} 
 
-\section{\large{Input to NLOPT}}
+\end{multicols}
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Input to NLOPT}
 Steven suggested on 2015.03.16 that the following function be constructed:
- 
-\texttt{
-double objective (int n, double *c)\{
-	Function to Compute FOM
-	\begin{itemize}
-	\item compute RHS
-	\item sol=(Existing A)$\setminus$ rhs
-	\item return FOM  
-	\end{itemize} \} 
- }
+
+\begin{lstlisting}[language=C++,basicstyle=\scriptsize\ttfamily,
+keywordstyle=\color{red},frame=single]
+function objective (int n, double *c)
+	compute RHS
+	sol=A\rhs
+	return FOM  
+\end{lstlisting} 
+
 where *c is an array of coefficients $c_{lp}$. (Steven said, why don't you start with 25 coeff.s, 5 by 5? You would need real and imaginary parts. There is no meaning in trying to make sense of different force/torque from modes. go straight to optimizing. )
 
-\end{multicols}
+\subsection{Implementation details}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
