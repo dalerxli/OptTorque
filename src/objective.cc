@@ -27,10 +27,10 @@ namespace scuff{
   void GetOPFTMatrices(RWGGeometry *G, int SurfaceIndex, cdouble Omega,
 		  HMatrix *QPFT[NUMPFT], bool NeedMatrix[NUMPFT]);
 }
-
 void ShowPARMMatirx(HMatrix* PARMMatrix); 
 void ShowPARMMatirx(int numL, HMatrix* PARMMatrix);
-double objective(RWGGeometry *G, HMatrix *PARMMatrix, HMatrix *M, HMatrix *Q); 
+double objective(RWGGeometry *G, HMatrix *PARMMatrix,
+		 HMatrix *M, HMatrix *Q); 
 //--------------------------------------------------------------------//
 //--------------------------------------------------------------------//
 //--------------------------------------------------------------------//
@@ -132,6 +132,23 @@ double objective(RWGGeometry *G, HMatrix *PARMMatrix, HMatrix *M, HMatrix *Q)
 
   // Need Qmatrix and Cadj. this was already done in MatrixFOM old version. 
   // you can use it again 
+  /*------------------------------------------------------------*/
+  /*------------------------------------------------------------*/
+  /*------------------------------------------------------------*/
+  PFTOptions *MyPFTOptions=InitPFTOptions();
+  HMatrix *QPFT[8]={0,0,0,0,0,0,0,0};
+  printf(" Getting PFT matrix Q...\n");
+  bool NeedMatrix[8]={false, false, false, false, false, false, false, false};
+
+  NeedMatrix[SCUFF_PABS]=true; //which matrices are needed. 
+  //NeedMatrix[SCUFF_PSCA]=true;
+  NeedMatrix[SCUFF_XFORCE]=true;
+  //NeedMatrix[SCUFF_ZFORCE]=true;
+  NeedMatrix[SCUFF_ZTORQUE]=true;
+
+  GetOPFTMatrices(G, 0, Omega, QPFT, NeedMatrix);
+	 
+
   
   
   return FOM; 

@@ -1,7 +1,6 @@
 /***************************************************************/
 /***************************************************************
  * OptTorque.cc -- Compute Power,Force,Torque 
- * Last updated on 2015.04.16, v14
  *
  ***************************************************************
  * v5 & v55 & v6:  Functional version of OptTorque.cc 
@@ -15,7 +14,7 @@
  * updates to v13: GLBeam Magnetic field corrected, Radial/Azimuthal
  ***************************************************************
  * updates to v14: VectorBeam Orthogonal Field Expansion Implemented
- *                 Vector Bessel Beams are used as the expansion basis
+ *                 Vector Bessel Beams are used as the basis
  * updates to v15: BEM matrix in/output + PFT matrix in/output 
  * 
  ***************************************************************/
@@ -492,6 +491,7 @@ int main(int argc, char *argv[])
      /*--------------------------------------------------------------*/
      if (OPFTFile)
       WritePFTFile(SSD, PFTOpts, SCUFF_PFT_OVERLAP, PlotPFTFlux, OPFTFile);
+     
      //         printf("Sanity Checkpoint 10 past \n");
      if (EPPFTFile)
       WritePFTFile(SSD, PFTOpts, SCUFF_PFT_EP, PlotPFTFlux, EPPFTFile);
@@ -535,19 +535,16 @@ int main(int argc, char *argv[])
      for(nfm=0; nfm<nFVMeshes; nfm++){
        VisualizeFields(SSD, FVMeshes[nfm]);};
      //         printf("Sanity Checkpoint 12 past \n");
-   }; //  for(nFreq=0; nFreq<NumFreqs; nFreqs++)
-    
+   };
+
   /***************************************************************/
   /***************************************************************/
   /***************************************************************/
   if (HDF5Context)
    HMatrix::CloseHDF5Context(HDF5Context);
-
-  //         printf("Sanity Checkpoint 13 past \n");
   delete M;
   delete KN;
   delete G;
-
   printf("OptTorque finished.\n");
 }//end main 
 
