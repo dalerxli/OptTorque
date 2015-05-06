@@ -1,5 +1,8 @@
 /*
-/* objective.cc  
+ * objective.cc  
+ * compute Torque FOM
+ * for a given BEM matrix, OPFT matrix, frequency, and PARMMatrix
+ * last updated on 2015.05.05
  */
 
 #include <stdio.h>
@@ -14,7 +17,7 @@
 #include "VBeam.h" 
 
 #ifndef cdouble
-typedef std::complex<double> cdouble;
+  typedef std::complex<double> cdouble;
 #endif
 
 #define II cdouble(0.0,1.0)
@@ -23,8 +26,8 @@ namespace scuff{
   //#define NUMPFT 8
   void GetOPFTMatrices(RWGGeometry *G, int SurfaceIndex, cdouble Omega,
 		  HMatrix *QPFT[NUMPFT], bool NeedMatrix[NUMPFT]);
-
 }
+
 void ShowPARMMatirx(HMatrix* PARMMatrix); 
 void ShowPARMMatirx(int numL, HMatrix* PARMMatrix);
 double objective(RWGGeometry *G, HMatrix *PARMMatrix, HMatrix *M, HMatrix *Q); 
@@ -33,15 +36,11 @@ double objective(RWGGeometry *G, HMatrix *PARMMatrix, HMatrix *M, HMatrix *Q);
 //--------------------------------------------------------------------//
 ///LEFTOVER TASKS
 //--------------------------------------------------------------------//
-// Import Mat_wvnm.dat 
 // Import the Q matrix. 
 // then compute C_adj by doing LUSolve(M, QbarCbar) 
 //--------------------------------------------------------------------//
-//  char *OmegaFileName=0;
-//  char *FileBase=0;
 
 int main(int argc, char *argv[])
-//--------------------------------------------------------------------//
   /// Objective 
   /// 
   /// READ In:
@@ -93,13 +92,14 @@ int main(int argc, char *argv[])
 double objective(RWGGeometry *G, HMatrix *PARMMatrix, HMatrix *M, HMatrix *Q)
 {
   printf("OBJECTIVE FUNCTION IS CALLED.\n"); 
-  /// Given:
+  /// Input:
   ///    parameter matrix PARMMatrix 
   ///    BEM matrix M, LU Factorized
   ///    PFT matrix Q 
   /// COMPUTE:
   ///    RHS (sum aM+bN, GetRHSVector )
   ///    KN=M\RHS (Surface current vector KN) 
+  /// 
 
   //--------------------------------------------------------------------//
   /// Simulate for single frequency                                  
@@ -132,6 +132,7 @@ double objective(RWGGeometry *G, HMatrix *PARMMatrix, HMatrix *M, HMatrix *Q)
 
   // Need Qmatrix and Cadj. this was already done in MatrixFOM old version. 
   // you can use it again 
+  
   
   return FOM; 
 }//end main 
