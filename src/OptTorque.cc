@@ -1,39 +1,39 @@
+/***************************************************************/
 /***************************************************************
  * OptTorque.cc -- Compute Power,Force,Torque 
  * Last updated on 2015.04.16, v14
  *
  ***************************************************************
- * v5 & v55 & v6: Functional version of OptTorque.cc 
- *                but only GHBeam/GLBeam sources were allowed 
- * updates to v7: Implemented all of scuff-scatter functionalities
- * updates to v8: GHBeam Declaration with correct pointers
- * updates to v9: SSD->IF=IFDList; Multiple GBeam Sources allowed 
+ * v5 & v55 & v6:  Functional version of OptTorque.cc 
+ *                 but only GHBeam/GLBeam sources were allowed 
+ * updates to v7:  Implemented all of scuff-scatter functionalities
+ * updates to v8:  GHBeam Declaration with correct pointers
+ * updates to v9:  SSD->IF=IFDList; Multiple GBeam Sources allowed 
  * updates to v10: Gouy Phase corrected
  * updates to v11: GetIntegratedIntensity added 
  * updates to v12: Intensity multiplier is added 
  * updates to v13: GLBeam Magnetic field corrected, Radial/Azimuthal
  ***************************************************************
  * updates to v14: VectorBeam Orthogonal Field Expansion Implemented
- * From v14, Vector Bessel Beams are used as the expansion basis.
+ *                 Vector Bessel Beams are used as the expansion basis
+ * updates to v15: BEM matrix in/output + PFT matrix in/output 
+ * 
  ***************************************************************/
-
+/***************************************************************/
 #include <stdio.h>
 #include <math.h>
 #include <complex>
 #include <stdarg.h>
 #include <fenv.h>
-
 #include "VBeam.h"
 #include "GHBeam.h"
 #include "OptTorque.h"
-
+/***************************************************************/
+/***************************************************************/
 #define II cdouble(0.0,1.0)
-/***************************************************************/
-/***************************************************************/
 #define MAXPW    10    // max number of plane waves
 #define MAXGB    1     // max number of gaussian beams
 #define MAXGLB   10    // max number of GLBeams 
-#define MAXGHB   10    // max number of GHBeams
 #define MAXVB    1     // max number of VBeams 
 #define MAXPS    10    // max number of point sources
 #define MAXFREQ  10    // max number of frequencies
@@ -41,8 +41,7 @@
 #define MAXFVM   10    // max number of field visualization meshes
 #define MAXCACHE 10    // max number of cache files for preload
 #define MAXSTR   1000
-
-
+/***************************************************************/
 /***************************************************************/
 // These static declarations are called in VisualizeFields
 // which is currently not used .
@@ -51,15 +50,15 @@ static char *FieldFuncs=const_cast<char *>(
  "sqrt(|Ex|^2+|Ey|^2+|Ez|^2),"
  "|Hx|,|Hy|,|Hz|,"
  "sqrt(|Hx|^2+|Hy|^2+|Hz|^2)");
-
 static const char *FieldTitles[]=
  {"|Ex|", "|Ey|", "|Ez|", "|E|",
   "|Hx|", "|Hy|", "|Hz|", "|H|",
  };
-
 #define NUMFIELDFUNCS 8// used in VisualizeFields
-
+/***************************************************************/
+/***************************************************************/
 using namespace scuff;
+/***************************************************************/
 /***************************************************************/
 double GetIntegratedIntensity(RWGGeometry *G, 
                               int SurfaceIndex, HVector *RHSVector); 
@@ -69,7 +68,7 @@ double GetIntegratedIntensity(RWGGeometry *G,
 //void ProcessByEdgeArray(RWGGeometry *G, int ns, cdouble Omega,
 //                        double **ByEdge);
 /***************************************************************/
-
+/***************************************************************/
 int main(int argc, char *argv[])
 {  
   /***************************************************************/
@@ -90,10 +89,6 @@ int main(int argc, char *argv[])
   double gbCenter[3*MAXGB];          int ngbCenter;
   double gbWaist[MAXGB];             int ngbWaist;
 //
-  double ghbWaist[MAXGHB];           int nghbWaist; 
-  int HM[MAXGHB];                    int ngHM;
-  int HN[MAXGHB];                    int ngHN; 
-
   double glbWaist[MAXGLB];           int nglbWaist;
   char *glbpolname[MAXGLB];          int nglbpolname; 
   double glbCenter[3*MAXGLB];        int nglbCenter;
@@ -104,7 +99,7 @@ int main(int argc, char *argv[])
 //
   int VL[MAXVB];                     int nVL; 
   double aIn[MAXVB];                 int naIn;
-  char abFile=0;                     
+  char *PARMMatrixFile=0;                     
 //
   double psLoc[3*MAXPS];             int npsLoc;
   cdouble psStrength[3*MAXPS];       int npsStrength;
@@ -155,13 +150,9 @@ int main(int argc, char *argv[])
      {"pwDirection",  PA_DOUBLE,  3, MAXPW, (void *)pwDir,   &npwDir,  "plane wave direction"},
      {"pwPolarization", PA_CDOUBLE, 3, MAXPW, (void *)pwPol, &npwPol,  "plane wave polarization"},
 //
-     {"VL",        PA_INT,     1, MAXVB, (void *)VL,            &nVL,   "VBeam mode index, if(-5<VL<5), singlemode; else, multimode"},
-     {"aIn",       PA_DOUBLE,  1, MAXVB, (void *)aIn,           &naIn,  "VBeam aperture angle aIn"},
-     {"abFile",    PA_STRING,  1, MAXVB, (void *)&abFile,       0,      "VBeam .ab coefficient file"}, 
-//
-     {"HM",        PA_INT,     1, MAXGHB, (void *)HM,       &ngHM,  "Hermite(x) M parameter"},
-     {"HN",        PA_INT,     1, MAXGHB, (void *)HN,       &ngHN,  "Hermite(y) N parameter"},
-     {"ghbWaist",  PA_DOUBLE,  1, MAXGHB, (void *)ghbWaist, &nghbWaist, "Hermite beam waist"},
+     {"PARMMatrix", PA_STRING,  1, 1, (void *)&PARMMatrixFile, 0, "VParameters file"},
+     {"VL",        PA_INT,     1, MAXVB, (void *)VL,            &nVL,   "VBeam mode for Single Radial Mode"},
+     {"aIn",       PA_DOUBLE,  1, MAXVB, (void *)aIn,           &naIn,  "VBeam aperture angle for Single Radial Mode"},
 //
      {"P",         PA_INT,     1, MAXGLB, (void *)P,        &nglP,"Laguerre P(radial) parameter"},
      {"L",         PA_INT,     1, MAXGLB, (void *)L,        &nglL,"Laguerre L(azimuthal) parameter"},
@@ -249,40 +240,35 @@ int main(int argc, char *argv[])
    ErrExit("numbers of --glbI0, --glbpolname, --P, --L, and --glbWaist options must agree ");
 
   IncField *IFDList=0, *IFD;
-  int npw, ngb, nps, nglb, nghb, nvb; 
+  int npw, ngb, nps, nglb, nvb; 
+
   // construct VBeam 
-  for(nvb=0; nvb<nVL; nvb++)
+  HMatrix *PARMMatrix = 0;
+  if (PARMMatrixFile) {      //if PARMMatrix is received 
+    PARMMatrix=new HMatrix(PARMMatrixFile, LHM_TEXT); 
+    IFD=new VBeam(PARMMatrix);     
+    IFD->Next=IFDList; 
+    IFDList=IFD; 
+  }
+  for(nvb=0; nvb<nVL; nvb++) //if VL and aIn are received
     {
-      if(VL[nvb]<=LMAX && VL[nvb]>=-LMAX) //singlemode
-        IFD=new VBeam(VL[nvb],aIn[nvb]); 
-      else{                     //multimode      
-        VL[nvb]= 1; //Set VL equal to 1 for now 
-        IFD=new VBeam(VL[nvb],aIn[nvb]); 
-        // reading in abFile is not constructed yet 
-      }
+      IFD=new VBeam(VL[nvb],aIn[nvb]); 
       IFD->Next=IFDList; 
       IFDList=IFD; 
     };
-
+  //
   for(npw=0; npw<npwPol; npw++)
    { IFD=new PlaneWave(pwPol + 3*npw, pwDir + 3*npw);
      IFD->Next=IFDList;
      IFDList=IFD;
    };
+  //
   for(ngb=0; ngb<ngbCenter; ngb++)
    { IFD=new GaussianBeam(gbCenter + 3*ngb, gbDir + 3*ngb, gbPol + 3*ngb, gbWaist[ngb]);
      IFD->Next=IFDList;
      IFDList=IFD;
    };
-     GHBeam *GHBeamInit = 0; //new GHBeam(HM,HN); 
      GLBeam *GLBeamInit = 0; //new GLBeam(HM,HN);   
-   for(nghb=0; nghb<ngHM; nghb++) 
-    { printf("GHBeam being prepared\n");
-      GHBeamInit = new GHBeam(HM[nghb],HN[nghb],ghbWaist[nghb]);
-      IFD=GHBeamInit ; 
-      IFD->Next=IFDList;
-      IFDList=IFD;       
-    }; 
    for(nglb=0; nglb<nglP; nglb++) 
     { printf("GLBeam being prepared\n");
       GLBeamInit = new GLBeam(P[nglb],L[nglb],glbWaist[nglb],glbI0[nglb],glbpolname[nglb]); 

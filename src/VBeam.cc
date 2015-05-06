@@ -17,47 +17,35 @@
 /**********************************************************************/
 VBeam::VBeam(int NewL, double NewaIn) 
 // VBeam initialization for a single mode
-// Mode index L is accepted as input
-// azimuthal polarization is chosen
+// Default is to use radial polarization (bL[L]=1)
 { 
-  L=NewL;  aIn=NewaIn;   
-  int Li;  
-  for(Li=0;Li<LSPAN;Li++) // initialize
-    {
-      aL[Li]=0.0; 
-      bL[Li]=0.0; 
-    }
-  /*
-  if(L>=0)        //set a single component of a or b to 1.0 
-    aL[L]=1.0;    // using azimuthal polarization
-  else{
-    Li = LMAX-L; 
-    aL[Li]=1.0;   // using azimuthal polarization
-  }
-  */ 
-  if(L>=0)   /// radial polarization 
-       bL[L]=1.0;
-   else{
-     Li = LMAX-L; 
-     bL[Li]=1.0;    
-   }
+  PMatrix->SetEntry(0,0,NewL);    //L
+  PMatrix->SetEntry(0,1,NewaIn);  //aIn
+  PMatrix->SetEntry(0,2,0.0);     //aL[L]
+  PMatrix->SetEntry(0,3,1.0);     //bL[L]
+  numL= 1; 
  } 
-VBeam::VBeam(double NewaL[LSPAN],double NewbL[LSPAN], double NewaIn)
-// VBeam initialization for superposition of multiple modes
-// List of coefficients aL and bL are accepted as inputs
-{ L=LMAX+1;  aIn=NewaIn; 
-  memcpy(aL,NewaL,LSPAN*sizeof(double));
-  memcpy(bL,NewbL,LSPAN*sizeof(double));  }
+/**********************************************************************/
+VBeam::VBeam(HMatrix *NewPMatrix) 
+{
+  if ( NewPMatrix->NC!=4 )
+    ErrExit("%s:%i: NewPMatrix should have 4 columns.");
+
+  if ( NewPMatrix->NR>25 )
+    ErrExit("%s:%i: NewPMatrix has too many rows >25.");
+
+  numL=NewPMatrix->NR; 
+  int iL; 
+  for(iL=0;iL<numL;iL++){
+    PMatrix->SetEntry(iL,0,NewPMatrix->GetEntryD(iL,0)); 
+    PMatrix->SetEntry(iL,1,NewPMatrix->GetEntryD(iL,1)); 
+    PMatrix->SetEntry(iL,2,NewPMatrix->GetEntryD(iL,2)); 
+    PMatrix->SetEntry(iL,3,NewPMatrix->GetEntryD(iL,3)); 
+  }
+}
 /**********************************************************************/
 VBeam::~VBeam(){} // Destructor is not made yet. 
 /**********************************************************************/
-void VBeam::SetL(int NewL) {   L=NewL; }
-void VBeam::Setab(double NewaL[LSPAN],double NewbL[LSPAN])
-{ 
-  memcpy(aL,NewaL,LSPAN*sizeof(double));
-  memcpy(bL,NewbL,LSPAN*sizeof(double));  
-}
-void VBeam::SetaIn(double NewaIn) {   aIn=NewaIn; }
 void VBeam::SetCxyz(double NewCxyz[3])
 { memcpy(Cxyz,NewCxyz,3*sizeof(double)); }
 void VBeam::SetnHat(double NewnHat[3]) 
@@ -76,51 +64,31 @@ void VBeam::GetFields(const double X[3], cdouble EH[6])
   
   cdouble Z=ZVAC*sqrt(Mu/Eps); //relative wave impedance of exterior medium
 
-  if(-LMAX<L && L<LMAX) 
-    { // run for a single mode if -LMAX<L<LMAX 
-      VBeam::GetMN(X,L,aIn,M,N);
-      int Li=0; 
-      if(L>=0)
-        Li=L; 
-      else
-        Li=LMAX-L;      
-      EH[0]=-(aL[Li]*M[0]+bL[Li]*N[0]);
-      EH[1]=-(aL[Li]*M[1]+bL[Li]*N[1]);
-      EH[2]=-(aL[Li]*M[2]+bL[Li]*N[2]);
-      EH[3]=-(bL[Li]*M[0]+aL[Li]*N[0])/(II*Z);
-      EH[4]=-(bL[Li]*M[1]+aL[Li]*N[1])/(II*Z);
-      EH[5]=-(bL[Li]*M[2]+aL[Li]*N[2])/(II*Z);
-    }
-  else //run for superposition of modes if L>LMAX or L<-LMAX
-    {
-      int L0, Li; // input L0 and index Li
-      int j;
-      for(j=0;j<=6;j++)        // initialize EH
-        EH[j]=0.0; 
-      
-      for(Li=0;Li<LSPAN;Li++)  // sum EH for each entry
-        {
-          if(Li<=LMAX)
-            L0=Li;
-          else
-            L0=-Li+LMAX; 
-
-          if(aL[Li]==0&&bL[Li]==0){
-            //don't run GetMN if coeff.s are zero.
-          }else{
-            VBeam::GetMN(X,L0,aIn,M,N);
-            EH[0]+=-(aL[Li]*M[0]+bL[Li]*N[0]);
-            EH[1]+=-(aL[Li]*M[1]+bL[Li]*N[1]);
-            EH[2]+=-(aL[Li]*M[2]+bL[Li]*N[2]);
-            EH[3]+=-(bL[Li]*M[0]+aL[Li]*N[0])/(II*Z);
-            EH[4]+=-(bL[Li]*M[1]+aL[Li]*N[1])/(II*Z);
-            EH[5]+=-(bL[Li]*M[2]+aL[Li]*N[2])/(II*Z);
-          }
-        }
-    }//endif(L==LMAX+1)
+  int j;
+  for(j=0;j<=6;j++)        // initialize EH
+    EH[j]=0.0; 
   
+  int iL, L; 
+  double aIn,aL,bL; 
+  for(iL=0; iL<numL; iL++) //for each row of PMatrix
+    {
+      L   =PMatrix->GetEntryD(iL,0);
+      aIn =PMatrix->GetEntryD(iL,1);
+      aL  =PMatrix->GetEntryD(iL,2);
+      bL  =PMatrix->GetEntryD(iL,3);
+      //      printf("aL=%f,bL=%f\n",aL,bL);
+      if(aL==0.0&&bL==0.0){}///don't run GetMN if coeff.s are zero
+      else{
+        VBeam::GetMN(X,L,aIn,M,N);
+        EH[0]+=-(aL*M[0]+bL*N[0]);
+        EH[1]+=-(aL*M[1]+bL*N[1]);
+        EH[2]+=-(aL*M[2]+bL*N[2]);
+        EH[3]+=-(bL*M[0]+aL*N[0])/(II*Z);
+        EH[4]+=-(bL*M[1]+aL*N[1])/(II*Z);
+        EH[5]+=-(bL*M[2]+aL*N[2])/(II*Z);
+      }
+    }
  }//end GetField
-
 /**********************************************************************/
 /**********************************************************************/
 /**********************************************************************/

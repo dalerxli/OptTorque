@@ -1,16 +1,14 @@
 /*
  * VBeam.h   -- definition for the VectorBeam implementation
  *            -- of the IncField class
- * v14
+ * v15
  */
 #ifndef VBEAM_H
 #define VBEAM_H
-#define LMAX 5
-#define LSPAN 2*LMAX+1
-
+#define LMAX 25
 #include <libhrutil.h>
+#include <libhmat.h>
 #include <libIncField.h>
-
 /**********************************************************************/
 /**********************************************************************/
 /**********************************************************************/
@@ -23,27 +21,21 @@
    // where EH is constructed as a weighted sum of M[L] and N[L]. 
    ///////////////////////////
    // Bessel Beams: GetMN
-   // L modes with -LMAX<L<LMAX 
-   // Default aperture angle is 0.5degree
-   ///////////////////////////
  public:
-   int L; 
-   double aL[LSPAN], bL[LSPAN]; // array of coefficients 
-   double aIn;        // beam opening angle in degrees (Numerical Aperture)
+   HMatrix *PMatrix=new HMatrix(LMAX,4,LHM_REAL);  // Parameter matrix 
+   int numL; //number of modes summed in PMatrix (nonzero mode number);
+
    double Cxyz[3];    // beam center position [um]
    double nHat[3];    // propagation direction
    cdouble M[3],N[3]; // Orthogonal Vector Fields
-   ///////////////////////////////////////////////////////////
+
    VBeam(int NewL, double NewaIn);
-   VBeam(double NewaL[LSPAN], double NewbL[LSPAN],double NewaIn);
+   VBeam(HMatrix *NewPMatrix);
    ~VBeam();
-   ///////////////////////////////////////////////////////////
-   void SetL(int NewL);
-   void SetaIn(double NewaIn);
-   void Setab(double NewaL[LSPAN], double NewbL[LSPAN]);
+
    void SetCxyz(double NewCxyz[3]);
    void SetnHat(double NewnHat[3]);
-   ///////////////////////////////////////////////////////////
+
    void GetFields(const double X[3], cdouble EH[6]);
    void GetMN(const double X[3], int L, double aIn, 
               cdouble M[3], cdouble N[3]);         
