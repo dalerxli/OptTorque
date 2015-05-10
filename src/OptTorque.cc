@@ -615,41 +615,34 @@ void VisualizeFields(RWGGeometry *G, IncField *IF, HVector *KN,
   FILE *f=fopen(PPFileName,"a");
   if (!f)
    ErrExit("could not open field visualization file %s",PPFileName);
-
   /*--------------------------------------------------------------*/
   /*- try to open user's mesh file -------------------------------*/
   /*--------------------------------------------------------------*/
   RWGSurface *S=new RWGSurface(MeshFileName);
-
   Log("Creating flux plot for surface %s...",MeshFileName);
   printf("Creating flux plot for surface %s...\n",MeshFileName);
-
   /*--------------------------------------------------------------*/
   /*- create an Nx3 HMatrix whose columns are the coordinates of  */
   /*- the flux mesh panel vertices                                */
   /*--------------------------------------------------------------*/
   HMatrix *XMatrix=new HMatrix(S->NumVertices, 3);
-
   for(int nv=0; nv<S->NumVertices; nv++)
    {
      XMatrix->SetEntry(nv, 0, S->Vertices[3*nv + 0]);
      XMatrix->SetEntry(nv, 1, S->Vertices[3*nv + 1]);
      XMatrix->SetEntry(nv, 2, S->Vertices[3*nv + 2]);
    };
-
   /*--------------------------------------------------------------*/
   /*- get the total fields at the panel vertices                 -*/
   /*--------------------------------------------------------------*/
   HMatrix *FMatrix=G->GetFields(IF, KN, Omega, 0,
                                 XMatrix, 0, FieldFuncs);
-
   /*--------------------------------------------------------------*/
   /*--------------------------------------------------------------*/
   /*--------------------------------------------------------------*/
   for(int nff=0; nff<NUMFIELDFUNCS; nff++)
    {
      fprintf(f,"View \"%s(%s)\" {\n",FieldTitles[nff],z2s(Omega));
-
      /*--------------------------------------------------------------*/
      /*--------------------------------------------------------------*/
      /*--------------------------------------------------------------*/
@@ -668,19 +661,16 @@ void VisualizeFields(RWGGeometry *G, IncField *IF, HVector *KN,
                    FMatrix->GetEntryD(iV2,nff),
                    FMatrix->GetEntryD(iV3,nff));
       };
-
      /*--------------------------------------------------------------*/
      /*--------------------------------------------------------------*/
      /*--------------------------------------------------------------*/
      fprintf(f,"};\n\n");
    };
   fclose(f);
-
   delete FMatrix;
   delete XMatrix;
   delete S;
 }
-
 /***************************************************************/
 /***************************************************************/
 /***************************************************************/
@@ -709,8 +699,6 @@ void ProcessByEdgeArray(RWGGeometry *G, int ns, cdouble Omega,
      snprintf(Tag,20,"%s(%s)",PFTNames[nq],z2s(Omega));
      G->Surfaces[ns]->PlotScalarDensity(ByEdge[nq],true,FileName,Tag);
    };
-
  // free(ByEdge[0]);
  // free(ByEdge);
-
 }
