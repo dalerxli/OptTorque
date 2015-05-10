@@ -1,17 +1,16 @@
-/*
+/*---------------------------------------------------------------
  * objective.cc  
  * compute Torque FOM
  * for a given BEM matrix, OPFT matrix, frequency, and PARMMatrix
+ * created 2015.03
  * last updated on 2015.05.05
- */
-
+ *--------------------------------------------------------------*/
 #include <stdio.h>
 #include <math.h>
 #include <complex>
 #include <fstream>
 #include <iostream>
 #include <cstdlib>
-
 #include <libhrutil.h>
 #include <libscuff.h>
 #include "VBeam.h" 
@@ -31,14 +30,13 @@ void ShowPARMMatirx(HMatrix* PARMMatrix);
 void ShowPARMMatirx(int numL, HMatrix* PARMMatrix);
 double objective(RWGGeometry *G, HMatrix *PARMMatrix,
 		 HMatrix *M, HMatrix *Q); 
-//--------------------------------------------------------------------//
-//--------------------------------------------------------------------//
-//--------------------------------------------------------------------//
+//---------------------------------------------------------------//
+//---------------------------------------------------------------//
 ///LEFTOVER TASKS
-//--------------------------------------------------------------------//
+//---------------------------------------------------------------//
 // Import the Q matrix. 
 // then compute C_adj by doing LUSolve(M, QbarCbar) 
-//--------------------------------------------------------------------//
+//---------------------------------------------------------------//
 
 int main(int argc, char *argv[])
   /// Objective 
@@ -85,6 +83,8 @@ int main(int argc, char *argv[])
   //A->LUFactorize(); //(already done)
   HMatrix *Q = new HMatrix(PFTMatrixFile, LHM_TEXT);
   objective(G, PARMMatrix, M, Q); 
+
+  delete G, PARMMatrix, M, Q; 
 }
 /***************************************************************/
 /***************************************************************/
@@ -147,10 +147,7 @@ double objective(RWGGeometry *G, HMatrix *PARMMatrix, HMatrix *M, HMatrix *Q)
   NeedMatrix[SCUFF_ZTORQUE]=true;
 
   GetOPFTMatrices(G, 0, Omega, QPFT, NeedMatrix);
-	 
-
-  
-  
+  delete VBInit; 
   return FOM; 
 }//end main 
 //--------------------------------------------------------------------//
