@@ -3,7 +3,7 @@
  * Compute and store M and OPFT Q matrix 
  * for a given frequency
  * created      2015.05.09
- * last updated 2015.05.o
+ * last updated 2015.05.11
  *--------------------------------------------------------------*/
 #include <stdio.h>
 #include <math.h>
