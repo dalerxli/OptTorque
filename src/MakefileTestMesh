@@ -31,8 +31,8 @@ HR_LIBS = -lscuff
 
 LIBS = $(HR_LIBS) $(HDF5_LIBS) $(LB_LIBS)
 
-OT = VBeamTest.o VBeam.o
-VBeamTest: 	$(OT)
+OT = VBeamTestMesh.o VBeam.o
+VBeamTestMesh: 	$(OT)
 		$(CXX) -Wall $(LDFLAGS) -o $@ $(OT) $(LIBS)
 clean:
 		rm *.o
