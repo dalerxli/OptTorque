@@ -332,7 +332,7 @@ int main(int argc, char *argv[])
 
   /*******************************************************************/
   /* sanity check: for now (20120924), calculations involving        */
-  /* extended geometries must have only a single incident field      */
+  /* extended geometrgies must have only a single incident field      */
   /* source, which must be a plane wave, and the bloch wavevector    */
   /* is extracted from the plane wave direction                      */
   /*******************************************************************/

@@ -67,6 +67,4 @@ class GHBeam: public IncField
    void SetnHat(double NewnHat[3]);
    void GetFields(const double X[3], cdouble EH[6]);
  };
-
-
 #endif // #ifndef GHBEAM_H

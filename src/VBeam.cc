@@ -1,8 +1,9 @@
 /*
  * VBeam.cc   -- Vectorbeam implementation of the
  *                IncField class
+ * 
  * v15. : changed coefficients for EH summation (-1/(II*Z))
- * radial polarization
+ * v16. : GetField is debugged to take correct HMatrix Input 
  */
 #include <stdio.h>
 #include <cstdlib> //for abs
@@ -65,7 +66,7 @@ void VBeam::GetFields(const double X[3], cdouble EH[6])
   cdouble Z=ZVAC*sqrt(Mu/Eps); //relative wave impedance of exterior medium
 
   int j;
-  for(j=0;j<=6;j++)        // initialize EH
+  for(j=0;j<6;j++)        // initialize EH
     EH[j]=0.0; 
   
   int iL, L; 
@@ -80,12 +81,18 @@ void VBeam::GetFields(const double X[3], cdouble EH[6])
       if(aL==0.0&&bL==0.0){}///don't run GetMN if coeff.s are zero
       else{
         VBeam::GetMN(X,L,aIn,M,N);
-        EH[0]+=-(aL*M[0]+bL*N[0]);
-        EH[1]+=-(aL*M[1]+bL*N[1]);
-        EH[2]+=-(aL*M[2]+bL*N[2]);
-        EH[3]+=-(bL*M[0]+aL*N[0])/(II*Z);
-        EH[4]+=-(bL*M[1]+aL*N[1])/(II*Z);
-        EH[5]+=-(bL*M[2]+aL*N[2])/(II*Z);
+        EH[0]+=-(aL*M[0]);
+        EH[0]+=-(bL*N[0]);
+        EH[1]+=-(aL*M[1]);
+        EH[1]+=-(bL*N[1]);
+        EH[2]+=-(aL*M[2]);
+        EH[2]+=-(bL*N[2]);
+        EH[3]+=-(bL*M[3])/(II*Z);
+        EH[3]+=-(aL*N[3])/(II*Z);
+        EH[4]+=-(bL*M[4])/(II*Z);
+        EH[4]+=-(aL*N[4])/(II*Z);
+        EH[5]+=-(bL*M[5])/(II*Z);
+        EH[5]+=-(aL*N[5])/(II*Z);
       }
     }
  }//end GetField
@@ -127,9 +134,10 @@ void VBeam::GetMN(const double X[3], int L, double aIn, cdouble M[3], cdouble N[
   //////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////
   /// initialize M=N=0. 
-  int j;
-  for(j=0;j<=2;j++)
-    M[j]=0.0; N[j]=0.0;
+  for(int j=0;j<=2;j++){///catch errors this way. j should live only here.
+    M[j]=0.0; 
+    N[j]=0.0;
+  }
 
   /// Set M, N accordingly 
   if(r!=0.0){
