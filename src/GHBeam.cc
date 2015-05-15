@@ -1,7 +1,7 @@
 /*
  * GHBeam.cc   -- gauss-legendre beam implementation of the
  *                IncField class
- * v12. 
+ * v16. 
  */
 #include <stdio.h>
 #include <cstdlib> //for abs
@@ -221,11 +221,8 @@ EH[4]=N[1]/Z;
 EH[5]=N[2]/Z;
 }//end getLG
 
-
 /**********************************************************************/
-/**********************************************************************/
-/**********************************************************************/
-/* Gauss-Hermite                          *****************************/
+// Gauss-Hermite 
 /**********************************************************************/
 GHBeam::GHBeam(int NewHM, int NewHN)
 {
@@ -309,17 +306,13 @@ void GHBeam::GetFields(const double X[3], cdouble EH[6])
   EH[5] = (nHat[0]*EH[1] - nHat[1]*EH[0]) / Z;
 }
 
-
-
 /**********************************************************************/
 /* Polynomials                            *****************************/
 /**********************************************************************/
 double hn_polynomial_value ( int n, double x )
 //****************************************************************************80
-//  Purpose:
 //    HN_POLYNOMIAL_VALUE evaluates Hn(i,x).
 //
-//  Discussion:
 //    Hn(i,x) is the normalized physicist's Hermite polynomial of degree I.
 //    These polynomials satisfy the orthonormality condition:
 //      Integral ( -oo < X < +oo )
@@ -336,44 +329,41 @@ double hn_polynomial_value ( int n, double x )
 //    National Bureau of Standards, 1964,
 //    ISBN: 0-486-61272-4,
 //    LC: QA47.A34.
-//  Parameters:
-//    Input, int M, the number of evaluation points.
-//    Input, int N, the highest order polynomial to compute.
-//    Note that polynomials 0 through N will be computed.
-//    Input, double X[M], the evaluation points.
-//    Output, double HN_POLYNOMIAL_VALUE[M*(N+1)], the values of the first
-//    N+1 Hermite polynomials at the evaluation points.
 //****************************************************************************80
-//    r8_pi -> M_Pi, Yoonkyung Eunnie Lee, 2015
-//  This function is modified to return the highest order polynomial value itself
-//  given a single location input (double x).
+//    Yoonkyung Eunnie Lee, 2015
+//    function simplified to compute Hn(x) for a single double value x. 
+//    also, r8_pi -> M_Pi
 //****************************************************************************80
 {
-  double fact, two_power, pval;
-  int i, j;
-  double* p;
+  double pj, pj1, pj2, pnorm, fact, two_power; 
+  pnorm = fact = two_power = 1.0;
   if ( n < 0 )
-  { return NAN; }
-  p = new double[n+1];
-  p[0] = 1.0;
-  if ( n == 0 )
-  {  return p[0];}
-  p[1] = 2.0*x;
-  for (j=2; j<=n;j++)
-  { p[j] = 2.0*x*p[j-1] - 2.0*(double)(j-1)*p[j-2];  }
-//  Normalize.
-  fact = 1.0;
-  two_power = 1.0;
-  for ( j = 0; j <= n; j++ )
-  {  p[j] = p[j] / sqrt(fact*two_power*sqrt(M_PI));
-     fact = fact*(double)(j+1);
-     two_power = two_power * 2.0;
-  }
-  pval = p[n];
-  delete [] p;
-  return pval;
+    { printf("polynomial order n cannot be negative, changing n to 1.\n"); 
+      return NAN; 
+    }else if(n==0)
+    {
+      return 1.0;
+    }else
+    {
+      pnorm = sqrt(fact*two_power*sqrt(M_PI)); 
+      fact = fact*(double)(1); 
+      two_power= two_power*2.0; 
+      pj2 = 1.0; 
+      pj1 = 2.0*x; 
+      pnorm = sqrt(fact*two_power*sqrt(M_PI)); 
+      fact = fact*(double)(2); 
+      two_power= two_power*2.0; 
+      for(int j=2;j<=n;j++){
+        pj = 2.0*x*pj1 - 2.0*(double)(j-1)*pj2; 
+        pj2 = pj1;
+        pj1 = pj; 
+        pnorm = sqrt(fact*two_power*sqrt(M_PI)); 
+        fact = fact*(double)(j+1); 
+        two_power= two_power*2.0; 
+      }
+      return pj1/pnorm; 
+    } 
 }
-
 double lm_polynomial( int n, int m, double x)
 //****************************************************************************80
 //    LM_POLYNOMIAL evaluates Laguerre polynomials Lm(n,m,x).
@@ -389,250 +379,30 @@ double lm_polynomial( int n, int m, double x)
 //    10 March 2012
 //  Author:
 //    John Burkardt
-//  Modified by Y. Eunnie Lee 2015, to input and output real numbers instead of arrays
-//  Parameters:
-//    Input, int N, the highest order polynomial to compute.
-//    Input, int M, the parameter.  M must be nonnegative.
-//    Input, double X, the evaluation points.
-//    Output, double LM_POLYNOMIAL[MM*(N+1)], the function values.
+//****************************************************************************80
+//    Yoonkyung Eunnie Lee, 2015
+//    function simplified to compute Lm(n,x) for a single double value x. 
+//****************************************************************************80
 {
   int i, j;
-  double *v, vval;
-  v = new double[n+1];
-  if ( n < 0 )
-  {    printf("polynomial order n cannot be negative, changing n to 1.\n"); 
-       n=0;  
-  }
-  v = new double[1*(n+1)];
-  for ( j = 0; j <= n; j++ )
-    {      v[j] = 0.0;  }//initialize 
-  v[0] = 1.0; //first term always 1.0 ; 
-  if ( n == 0 )
-  {    return v[0];  }
-
-  v[1] = (double)(m+1)-x;
-
-  for ( j = 2; j <= n; j++ )
-  {   v[j] = (((double)(m+2*j-1)-x)*v[j-1]
-             + (double)(-m-j+1)*v[j-2])/(double)(j);
-  }
-  vval = v[n];
-  delete [] v;
-  return vval;
-}
-
-/**********************************************************************/
-/**********************************************************************/
-double *hn_polynomial_value ( int m, int n, double x[] )
-//****************************************************************************80
-//  Purpose:
-//    HN_POLYNOMIAL_VALUE evaluates Hn(i,x).
-//  Discussion:
-//    Hn(i,x) is the normalized physicist's Hermite polynomial of degree I.
-//    These polynomials satisfy the orthonormality condition:
-//      Integral ( -oo < X < +oo )
-//        exp ( - X^2 ) * Hn(M,X) Hn(N,X) dX = delta ( N, M )
-//  Licensing:
-//    This code is distributed under the GNU LGPL license.
-//  Modified:
-//    26 February 2012
-//  Author:
-//    John Burkardt
-//  Reference:
-//    Milton Abramowitz, Irene Stegun,
-//    Handbook of Mathematical Functions,
-//    National Bureau of Standards, 1964,
-//    ISBN: 0-486-61272-4,
-//    LC: QA47.A34.
-//  Parameters:
-//    Input, int M, the number of evaluation points.
-//    Input, int N, the highest order polynomial to compute.
-//    Note that polynomials 0 through N will be computed.
-//    Input, double X[M], the evaluation points.
-//    Output, double HN_POLYNOMIAL_VALUE[M*(N+1)], the values of the first
-//    N+1 Hermite polynomials at the evaluation points.
-//    r8_pi -> M_Pi, Yoonkyung Eunnie Lee, 2015
-{
-  double fact;
-  int i, j;
-  double *p;
-  double two_power;
+  double vj, vj2, vj1 ; 
 
   if ( n < 0 )
-  { return NULL; }
-  p = new double[m*(n+1)];
-  for ( i = 0; i < m; i++ )
-  {     p[i+0*m] = 1.0;  }
-  if ( n == 0 )
-  {    return p;  }
-  for ( i = 0; i < m; i++ )
-  {    p[i+1*m] = 2.0 * x[i];  }
-  for ( j = 2; j <= n; j++ )
-  {
-      for ( i = 0; i < m; i++ )
     {
-      p[i+j*m] = 2.0 * x[i] * p[i+(j-1)*m]
-        - 2.0 * ( double ) ( j - 1 ) * p[i+(j-2)*m];
-    }
-  }
-//  Normalize.
-  fact = 1.0;
-  two_power = 1.0;
-  for ( j = 0; j <= n; j++ )
-  {
-    for ( i = 0; i < m; i++ )
+      printf("polynomial order n cannot be negative, changing n to 1.\n"); 
+      return NAN; 
+    }else if (n==0)
     {
-      p[i+j*m] = p[i+j*m] / sqrt ( fact * two_power * sqrt ( M_PI ) );
-    }
-    fact = fact * ( double ) ( j + 1 );
-    two_power = two_power * 2.0;
-  }
-  return p; //this also has memory leaks.
-}
-double *lm_polynomial ( int mm, int n, int m, double x[] )
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    LM_POLYNOMIAL evaluates Laguerre polynomials Lm(n,m,x).
-//
-//  First terms:
-//
-//    M = 0
-//
-//    Lm(0,0,X) =   1
-//    Lm(1,0,X) =  -X   +  1
-//    Lm(2,0,X) =   X^2 -  4 X   +  2
-//    Lm(3,0,X) =  -X^3 +  9 X^2 -  18 X   +    6
-//    Lm(4,0,X) =   X^4 - 16 X^3 +  72 X^2 -   96 X +     24
-//    Lm(5,0,X) =  -X^5 + 25 X^4 - 200 X^3 +  600 X^2 -  600 x   +  120
-//    Lm(6,0,X) =   X^6 - 36 X^5 + 450 X^4 - 2400 X^3 + 5400 X^2 - 4320 X + 720
-//
-//    M = 1
-//
-//    Lm(0,1,X) =    0
-//    Lm(1,1,X) =   -1,
-//    Lm(2,1,X) =    2 X - 4,
-//    Lm(3,1,X) =   -3 X^2 + 18 X - 18,
-//    Lm(4,1,X) =    4 X^3 - 48 X^2 + 144 X - 96
-//
-//    M = 2
-//
-//    Lm(0,2,X) =    0
-//    Lm(1,2,X) =    0,
-//    Lm(2,2,X) =    2,
-//    Lm(3,2,X) =   -6 X + 18,
-//    Lm(4,2,X) =   12 X^2 - 96 X + 144
-//
-//    M = 3
-//
-//    Lm(0,3,X) =    0
-//    Lm(1,3,X) =    0,
-//    Lm(2,3,X) =    0,
-//    Lm(3,3,X) =   -6,
-//    Lm(4,3,X) =   24 X - 96
-//
-//    M = 4
-//
-//    Lm(0,4,X) =    0
-//    Lm(1,4,X) =    0
-//    Lm(2,4,X) =    0
-//    Lm(3,4,X) =    0
-//    Lm(4,4,X) =   24
-//
-//  Recursion:
-//
-//    Lm(0,M,X)   = 1
-//    Lm(1,M,X)   = (M+1-X)
-//
-//    if 2 <= N:
-//
-//      Lm(N,M,X)   = ( (M+2*N-1-X) * Lm(N-1,M,X)
-//                   +   (1-M-N)    * Lm(N-2,M,X) ) / N
-//
-//  Special values:
-//
-//    For M = 0, the associated Laguerre polynomials Lm(N,M,X) are equal
-//    to the Laguerre polynomials L(N,X).
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license.
-//
-//  Modified:
-//
-//    10 March 2012
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Reference:
-//
-//    Milton Abramowitz, Irene Stegun,
-//    Handbook of Mathematical Functions,
-//    National Bureau of Standards, 1964,
-//    ISBN: 0-486-61272-4,
-//    LC: QA47.A34.
-//
-//  Parameters:
-//
-//    Input, int MM, the number of evaluation points.
-//
-//    Input, int N, the highest order polynomial to compute.
-//
-//    Input, int M, the parameter.  M must be nonnegative.
-//
-//    Input, double X[MM], the evaluation points.
-//
-//    Output, double LM_POLYNOMIAL[MM*(N+1)], the function values.
-//
-{
-  int i;
-  int j;
-  double *v;
-
-  if ( n < 0 )
-  {
-    printf("polynomial order n cannot be negative, changing n to 1.\n"); 
-    n = 0  ; 
-  }
-
-  v = new double[mm*(n+1)];
-
-  for ( j = 0; j <= n; j++ )
-  {
-    for ( i = 0; i < mm; i++ )
+      return x; 
+    }else
     {
-      v[i+j*mm] = 0.0;
+      vj2 = 1.0; // first term always 1.0; 
+      vj1 = (m+1)-x; 
+      for(int j=2;j<=n;j++){
+        vj = (((m+2*j-1)-x)*vj1 + (-m-j+1)*vj2) / j;
+        vj2 = vj1;
+        vj1 = vj;         
+      }
+      return vj1; 
     }
-  }
-
-  for ( i = 0; i < mm; i++ )
-  {
-    v[i+0*mm] = 1.0;
-  }
-
-  if ( n == 0 )
-  {
-    return v;
-  }
-
-  for ( i = 0; i < mm; i++ )
-  {
-    v[i+1*mm] = ( double ) ( m + 1 ) - x[i];
-  }
-
-  for ( j = 2; j <= n; j++ )
-  {
-    for ( i = 0; i < mm; i++ )
-    {
-      v[i+j*mm] = ( ( ( double ) (   m + 2 * j - 1 ) - x[i] ) * v[i+(j-1)*mm]
-                    + ( double ) ( - m     - j + 1 )          * v[i+(j-2)*mm] )
-                    / ( double ) (           j     );
-    }
-  }
-
-  return v;
 }
