@@ -1,7 +1,0 @@
-MESHPATH /home/eunnie12/Documents/LinkDropbox/Data/BEM/F00_MeshData/RoundedPoly_20150302
-MESHPATH /home/eunnie12/Documents/LinkDropbox/Data/BEM/F00_MeshData/FVDSI
-
-OBJECT N3_400nm_Mesh40nm
-	MESHFILE N3_400nm_Mesh40nm.msh
-	MATERIAL FILE_Au_Palik_exact_nir_w_eps_smooth_scuff.dat
-ENDOBJECT
