@@ -3,8 +3,8 @@ SHELL=/bin/bash
 SCUFFEM = $(HOME)/git/scuff-em-installation
 SCUFFEM2 = $(HOME)/git/scuff-em/src/libs/libscuff
 
-CXXFLAGS = -O2 -fopenmp -lm -std=c++11
-#CXXFLAGS = -O0 -ggdb -fopenmp -lm -std=c++11
+#CXXFLAGS = -O2 -fopenmp -lm -std=c++11
+CXXFLAGS = -O0 -ggdb -fopenmp -lm -std=c++11
 
 CPPFLAGS += -I$(SCUFFEM)/include/scuff-em
 CPPFLAGS += -I$(SCUFFEM2)
@@ -33,8 +33,25 @@ HR_LIBS = -lscuff
 LIBS = $(HR_LIBS) $(HDF5_LIBS) $(LB_LIBS)
 
 OT = OptTorque.o VBeam.o GHBeam.o OutputModules.o
-OptTorque15: 	$(OT)
+OptTorque: 	$(OT)
 		$(CXX) -Wall $(LDFLAGS) -o $@ $(OT) $(LIBS)
+
+VBT = VBeamTest.o VBeam.o
+VBeamTest: 	$(VBT)
+		$(CXX) -Wall $(LDFLAGS) -o $@ $(VBT) $(LIBS)
+
+VBTM = VBeamTestMesh.o VBeam.o
+VBeamTestMesh:	$(VBTM)
+		$(CXX) -Wall $(LDFLAGS) -o $@ $(VBTM) $(LIBS)
+
+GBT = GHBeamTest.o GHBeam.o
+GHBeamTest: 	$(GBT)
+		$(CXX) -Wall $(LDFLAGS) -o $@ $(GBT) $(LIBS)
+
+OBJ = objective.o VBeam.o GHBeam.o 
+objective: 	$(OBJ)
+		$(CXX) -Wall $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
+
 
 clean:
 		rm *.o 
