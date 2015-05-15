@@ -184,4 +184,45 @@ void ShowPARMMatirx(int numL, HMatrix* PARMMatrix)
       printf("%d \t %f \t %f \t %f\n",L,aIn,aL,bL);
   }   
 }
-//--------------------------------------------------------------------//
+// //--------------------------------------------------------------------//
+//   //    Step 1: create an SSData struct
+//   //    Step 2: for SSData, define or compute: G, Omega, RHS, IF.
+//   //    Step 3: run SSD->GetFields 
+//   // typedef struct SSData
+//   // { RWGGeometry * G ;
+//   // HMatrix * M ;
+//   // HVector * RHS , * KN ;
+//   // cdouble Omega ;
+//   // double * kBloch ;
+//   // IncField * IF ;
+//   // double PowerRadius ;
+//   // } SSData ;
+
+//   //--------------------------------------------------------------//
+//   //- process options  -------------------------------------------//
+//   //--------------------------------------------------------------//
+//   char *GeoFile=0, *PARMMatrixFile=0, *MeshFileName=0; 
+//   cdouble OmegaVals[1];        int nOmegaVals;
+//   OptStruct OSArray[]=
+//    { /* name    type   #args  max_instances  storage  count  description*/
+//      {"geometry",   PA_STRING,  1, 1, (void *)&GeoFile,   0,  ".scuffgeo file"},
+//      {"Omega",      PA_CDOUBLE, 1, MAXFREQ, (void *)OmegaVals, &nOmegaVals,  "(angular) frequency"},
+//      {0,0,0,0,0,0,0} };
+//   ProcessOptions(argc, argv, OSArray);
+//   //--------------------------------------------------------------//
+//   if (GeoFile==0)
+//    OSUsage(argv[0],OSArray,"--geometry option is mandatory");
+//   if (nOmegaVals==0)
+//     OSUsage(argv[0], OSArray, "you must specify at least one frequency");
+//   //--------------------------------------------------------------//
+//   char PARMMatrixFile[100],PPFile[100];
+//   snprintf(PARMMatrixFile,MAXSTR,"VParameters");  
+//   HMatrix *PARMMatrix = new HMatrix(PARMMatrixFile, LHM_TEXT);
+//   //    Step 1: create an SSData struct
+//   SSData MySSDforTestMesh, *SSD = &MySSDforTestMesh; 
+//   //    Step 2: for SSData, define or compute: G, Omega, RHS, IF.
+//   RWGGeometry *G = SSD->G = new RWGGeometry(GeoFile);
+//   SSD->RHS = SSD->G->AllocateRHSVector();  
+//   cdouble Omega = SSD->Omega = OmegaVals[1]; 
+//   VBeam *VB = new VBEam(PARMMatrix); 
+//   IncField *IF = SSD->IF = VB; 
