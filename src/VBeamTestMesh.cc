@@ -10,6 +10,7 @@
 #include <string.h>//for memcpy
 #include "VBeam.h"
 #include <libscuff.h> //to declare RWGSurface 
+#include <libhrutil.h>
   #ifndef cdouble
     typedef std::complex<double> cdouble;
   #endif
@@ -21,22 +22,27 @@
 //--------------------------------------------------------------------//
 static char *FieldFuncs=const_cast<char *>(
  "|Ex|,|Ey|,|Ez|,"
- "sqrt(|Ex|^2+|Ey|^2+|Ez|^2),"
- "|Hx|,|Hy|,|Hz|,"
- "sqrt(|Hx|^2+|Hy|^2+|Hz|^2)");
-
+ "|Hx|,|Hy|,|Hz|,");
 static const char *FieldTitles[]=
- {"|Ex|", "|Ey|", "|Ez|", "|E|",
-  "|Hx|", "|Hy|", "|Hz|", "|H|",
+ {"|Ex|", "|Ey|", "|Ez|",
+  "|Hx|", "|Hy|", "|Hz|", 
  };
+// static char *FieldFuncs=const_cast<char *>(
+//  "|Ex|,|Ey|,|Ez|,"
+//  "sqrt(|Ex|^2+|Ey|^2+|Ez|^2),"
+//  "|Hx|,|Hy|,|Hz|,"
+//  "sqrt(|Hx|^2+|Hy|^2+|Hz|^2)");
 
-#define NUMFIELDFUNCS 8
+// static const char *FieldTitles[]=
+//  {"|Ex|", "|Ey|", "|Ez|", "|E|",
+//   "|Hx|", "|Hy|", "|Hz|", "|H|",
+//  };
+
+#define NUMFIELDFUNCS 6
 //--------------------------------------------------------------------//
 int main(int argc, char *argv[]){
   //    Step 1: import VParameters and construct an IF. 
-  //    Step 2: import a mesh file and construct RWGSurface S. 
-  //    Step 3: 
-
+  //    Step 2: import a mesh file and construct RWGSurface S.
   //--------------------------------------------------------------//
   //- process options  -------------------------------------------//
   //--------------------------------------------------------------//
@@ -57,7 +63,7 @@ int main(int argc, char *argv[]){
   char PARMMatrixFile[100],PPFile[100];
   snprintf(PARMMatrixFile,100,"VParameters");  
   HMatrix *PARMMatrix = new HMatrix(PARMMatrixFile, LHM_TEXT);
-  snprintf(PPFile,100,"%s.pp",MeshFile);
+snprintf(PPFile,100,"%s.pp",GetFileBase(MeshFile));
   //    try to open output file 
   FILE *f=fopen(PPFile,"a");
   if (!f) 
@@ -81,7 +87,7 @@ printf("NumVertices of S is:%d \n ",S->NumVertices);
    };
   //     get the incident fields at the panel vertices
   int NumFuncs = 6;
-  HMatrix *FMatrix=new HMatrix(XMatrix->NR, NumFuncs, LHM_COMPLEX);
+  HMatrix *FMatrix=new HMatrix(XMatrix->NR, 6, LHM_COMPLEX);
   int ii,jj; 
   double X[3];
   cdouble EH[6]; 
@@ -91,12 +97,12 @@ printf("NumVertices of S is:%d \n ",S->NumVertices);
     X[1]=XMatrix->HMatrix::GetEntryD(jj,1); 
     X[2]=XMatrix->HMatrix::GetEntryD(jj,2);
     VB->VBeam::GetFields(X,EH); 
-    for (ii=0;ii<NumFuncs;ii++){
+    for (ii=0;ii<3;ii++){
       FMatrix->SetEntry(jj,ii,EH[ii]);
     }
   }
   /*--------------------------------------------------------------*/
-  for(int nff=0; nff<NUMFIELDFUNCS; nff++)
+  for(int nff=0; nff<6; nff++)
    { 
      fprintf(f,"View \"%s(%s)\" {\n",FieldTitles[nff],z2s(Omega));
      /*--------------------------------------------------------------*/
@@ -123,6 +129,4 @@ printf("NumVertices of S is:%d \n ",S->NumVertices);
   delete XMatrix;
 
   delete S;
-  delete VB; 
-  delete PARMMatrix;  
-}
+ }
