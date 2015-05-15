@@ -87,12 +87,12 @@ void VBeam::GetFields(const double X[3], cdouble EH[6])
         EH[1]+=-(bL*N[1]);
         EH[2]+=-(aL*M[2]);
         EH[2]+=-(bL*N[2]);
-        EH[3]+=-(bL*M[3])/(II*Z);
-        EH[3]+=-(aL*N[3])/(II*Z);
-        EH[4]+=-(bL*M[4])/(II*Z);
-        EH[4]+=-(aL*N[4])/(II*Z);
-        EH[5]+=-(bL*M[5])/(II*Z);
-        EH[5]+=-(aL*N[5])/(II*Z);
+        EH[3]+=-(bL*M[0])/(II*Z);
+        EH[3]+=-(aL*N[0])/(II*Z);
+        EH[4]+=-(bL*M[1])/(II*Z);
+        EH[4]+=-(aL*N[1])/(II*Z);
+        EH[5]+=-(bL*M[2])/(II*Z);
+        EH[5]+=-(aL*N[2])/(II*Z);
       }
     }
  }//end GetField
