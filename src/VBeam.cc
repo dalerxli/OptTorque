@@ -45,7 +45,9 @@ VBeam::VBeam(HMatrix *NewPMatrix)
   }
 }
 /**********************************************************************/
-VBeam::~VBeam(){} // Destructor is not made yet. 
+VBeam::~VBeam(){
+  delete PMatrix; 
+} // Destructor is not made yet. 
 /**********************************************************************/
 void VBeam::SetCxyz(double NewCxyz[3])
 { memcpy(Cxyz,NewCxyz,3*sizeof(double)); }
@@ -71,6 +73,7 @@ void VBeam::GetFields(const double X[3], cdouble EH[6])
   
   int iL, L; 
   double aIn,aL,bL; 
+  cdouble M[3], N[3]; 
   for(iL=0; iL<numL; iL++) //for each row of PMatrix
     {
       L   =PMatrix->GetEntryD(iL,0);

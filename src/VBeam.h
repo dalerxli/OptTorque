@@ -12,7 +12,7 @@
 /**********************************************************************/
 /**********************************************************************/
 /**********************************************************************/
- class VBeam: public IncField
+class VBeam: public IncField
  {
    ///////////////////////////
    // class for VectorBeam construction ( allows superposed beam input )
@@ -27,7 +27,6 @@
 
    double Cxyz[3];    // beam center position [um]
    double nHat[3];    // propagation direction
-   cdouble M[3],N[3]; // Orthogonal Vector Fields
 
    VBeam(int NewL, double NewaIn);
    VBeam(HMatrix *NewPMatrix);

@@ -57,15 +57,17 @@ static const char *FieldTitles[]=
 /***************************************************************/
 /***************************************************************/
 using namespace scuff;
+namespace scuff{
+  //#define NUMPFT 8
+  void GetOPFTMatrices(RWGGeometry *G, int SurfaceIndex, cdouble Omega,
+		  HMatrix *QPFT[NUMPFT], bool NeedMatrix[NUMPFT]);
+}
 /***************************************************************/
 /***************************************************************/
 double GetIntegratedIntensity(RWGGeometry *G, 
                               int SurfaceIndex, HVector *RHSVector); 
 void VisualizeIncField(RWGGeometry *G, IncField *IF,
                        cdouble Omega, char *MeshFile);
-
-//void VisualizeFields(RWGGeometry *G, IncField *IF, HVector *KN,
-//                     cdouble Omega, char *MeshFileName);
 //double **AllocateByEdgeArray(RWGGeometry *G, int ns);
 //void ProcessByEdgeArray(RWGGeometry *G, int ns, cdouble Omega,
 //                        double **ByEdge);
@@ -496,7 +498,7 @@ int main(int argc, char *argv[])
      /*--------------------------------------------------------------*/
      if (OPFTFile)
       WritePFTFile(SSD, PFTOpts, SCUFF_PFT_OVERLAP, PlotPFTFlux, OPFTFile);
-y     if (EPPFTFile)
+     if (EPPFTFile)
       WritePFTFile(SSD, PFTOpts, SCUFF_PFT_EP, PlotPFTFlux, EPPFTFile);
      if (DSIPFTFile)
       WritePFTFile(SSD, PFTOpts, SCUFF_PFT_DSI, PlotPFTFlux, DSIPFTFile);
@@ -605,79 +607,9 @@ double GetIntegratedIntensity(RWGGeometry *G, int SurfaceIndex, HVector *RHSVect
 /********************************************************************/
 /* return 0 if X lies outside the triangle with the given vertices, */
 /* or a positive integer otherwise.                                 */
+/********************************************************************/
 }//end getintegratedintensities
-
-void VisualizeFields(RWGGeometry *G, IncField *IF, HVector *KN,
-                     cdouble Omega, char *MeshFileName)
-{
-  /*--------------------------------------------------------------*/
-  /*- try to open output file ------------------------------------*/
-  /*--------------------------------------------------------------*/
-  char GeoFileBase[100], PPFileName[100];
-  strncpy(GeoFileBase,GetFileBase(G->GeoFileName),100);
-  snprintf(PPFileName,100,"%s.%s.pp",GeoFileBase,GetFileBase(MeshFileName));
-  FILE *f=fopen(PPFileName,"a");
-  if (!f)
-   ErrExit("could not open field visualization file %s",PPFileName);
-  /*--------------------------------------------------------------*/
-  /*- try to open user's mesh file -------------------------------*/
-  /*--------------------------------------------------------------*/
-  RWGSurface *S=new RWGSurface(MeshFileName);
-  Log("Creating flux plot for surface %s...",MeshFileName);
-  printf("Creating flux plot for surface %s...\n",MeshFileName);
-  /*--------------------------------------------------------------*/
-  /*- create an Nx3 HMatrix whose columns are the coordinates of  */
-  /*- the flux mesh panel vertices                                */
-  /*--------------------------------------------------------------*/
-  HMatrix *XMatrix=new HMatrix(S->NumVertices, 3);
-  for(int nv=0; nv<S->NumVertices; nv++)
-   {
-     XMatrix->SetEntry(nv, 0, S->Vertices[3*nv + 0]);
-     XMatrix->SetEntry(nv, 1, S->Vertices[3*nv + 1]);
-     XMatrix->SetEntry(nv, 2, S->Vertices[3*nv + 2]);
-   };
-  /*--------------------------------------------------------------*/
-  /*- get the total fields at the panel vertices                 -*/
-  /*--------------------------------------------------------------*/
-  HMatrix *FMatrix=G->GetFields(IF, KN, Omega, 0,
-                                XMatrix, 0, FieldFuncs);
-  /*--------------------------------------------------------------*/
-  /*--------------------------------------------------------------*/
-  /*--------------------------------------------------------------*/
-  for(int nff=0; nff<NUMFIELDFUNCS; nff++)
-   {
-     fprintf(f,"View \"%s(%s)\" {\n",FieldTitles[nff],z2s(Omega));
-     /*--------------------------------------------------------------*/
-     /*--------------------------------------------------------------*/
-     /*--------------------------------------------------------------*/
-     for(int np=0; np<S->NumPanels; np++)
-      {
-        RWGPanel *P=S->Panels[np];
-        int iV1 = P->VI[0];  double *V1 = S->Vertices + 3*iV1;
-        int iV2 = P->VI[1];  double *V2 = S->Vertices + 3*iV2;
-        int iV3 = P->VI[2];  double *V3 = S->Vertices + 3*iV3;
-
-        fprintf(f,"ST(%e,%e,%e,%e,%e,%e,%e,%e,%e) {%e,%e,%e};\n",
-                   V1[0], V1[1], V1[2],
-                   V2[0], V2[1], V2[2],
-                   V3[0], V3[1], V3[2],
-                   FMatrix->GetEntryD(iV1,nff),
-                   FMatrix->GetEntryD(iV2,nff),
-                   FMatrix->GetEntryD(iV3,nff));
-      };
-     /*--------------------------------------------------------------*/
-     /*--------------------------------------------------------------*/
-     /*--------------------------------------------------------------*/
-     fprintf(f,"};\n\n");
-   };
-  fclose(f);
-  delete FMatrix;
-  delete XMatrix;
-  delete S;
-}
-/***************************************************************/
-/***************************************************************/
-/***************************************************************/
+//--------------------------------------------------------------------//
 double **AllocateByEdgeArray(RWGGeometry *G, int ns)
 {
   int NE = G->Surfaces[ns]->NumEdges;
@@ -688,7 +620,7 @@ double **AllocateByEdgeArray(RWGGeometry *G, int ns)
 
   return ByEdge;
 }
-
+//--------------------------------------------------------------------//
 void ProcessByEdgeArray(RWGGeometry *G, int ns, cdouble Omega,
                         double **ByEdge)
 {
@@ -707,7 +639,8 @@ void ProcessByEdgeArray(RWGGeometry *G, int ns, cdouble Omega,
  // free(ByEdge);
 }
 //--------------------------------------------------------------------//
-void VisualizeIncField(RWGGeometry *G, IncField *IF, cdouble Omega, char *MeshFile)
+void VisualizeIncField(RWGGeometry *G, IncField *IF, cdouble Omega, 
+                         char *MeshFile)
 {
   char GeoFileBase[100], PPFileName[100];
   strncpy(GeoFileBase,GetFileBase(G->GeoFileName),100);
@@ -740,13 +673,9 @@ void VisualizeIncField(RWGGeometry *G, IncField *IF, cdouble Omega, char *MeshFi
     FMatrix=G->GetFields(IF, 0, Omega, 0, XMatrix, 0, FieldFuncs); 
   }
   /*--------------------------------------------------------------*/
-  /*--------------------------------------------------------------*/
-  /*--------------------------------------------------------------*/
   for(int nff=0; nff<NUMFIELDFUNCS; nff++)
    {
      fprintf(f,"View \"%s(%s)\" {\n",FieldTitles[nff],z2s(Omega));
-     /*--------------------------------------------------------------*/
-     /*--------------------------------------------------------------*/
      /*--------------------------------------------------------------*/
      for(int np=0; np<S->NumPanels; np++)
       {
@@ -764,8 +693,6 @@ void VisualizeIncField(RWGGeometry *G, IncField *IF, cdouble Omega, char *MeshFi
                 FMatrix->GetEntryD(iV3,nff));
       };
      /*--------------------------------------------------------------*/
-     /*--------------------------------------------------------------*/
-     /*--------------------------------------------------------------*/
      fprintf(f,"};\n\n");
    };
   fclose(f);
@@ -774,28 +701,26 @@ void VisualizeIncField(RWGGeometry *G, IncField *IF, cdouble Omega, char *MeshFi
   delete S;
 }
 
+// //this function doesn't seem necessary. you should include it in OptTorque.
+// HMatrix** GetQ(RWGGeometry *G, IncField *IF, cdouble Omega)
+// { 
+//   // store Q matrices in the HDF5 file opened. 
+//   printf("GetQ FUNCTION IS CALLED.\n"); 
 
-//this function doesn't seem necessary. you should include it in OptTorque.
-HMatrix** GetQ(RWGGeometry *G, IncField *IF, cdouble Omega)
-{ 
-  // store Q matrices in the HDF5 file opened. 
-  printf("GetQ FUNCTION IS CALLED.\n"); 
-
-  //---------------------------------------------------------------//
-  int numPFT = 0; // number of PFT matrices returned;  
-  PFTOptions *MyPFTOptions=InitPFTOptions();
-  HMatrix *QPFT[8]={0,0,0,0,0,0,0,0};
-  printf(" Getting PFT matrix Q...\n");
-  bool NeedMatrix[8]={false, false, false, false, 
-                      false, false, false, false}   
-  NeedMatrix[SCUFF_PABS]=true; //which matrices are needed. 
-  NeedMatrix[SCUFF_PSCA]=true;
-  //NeedMatrix[SCUFF_XFORCE]=true;
-  NeedMatrix[SCUFF_ZFORCE]=true;
-  NeedMatrix[SCUFF_ZTORQUE]=true;
-  numPFT = 4; 
-  GetOPFTMatrices(G, 0, Omega, QPFT, NeedMatrix);
-  //---------------------------------------------------------------//
-  // Store QPFT in HDF5
-  return QPFT; 
-}//end GetQ
+//   //---------------------------------------------------------------//
+//   int numPFT = 0; // number of PFT matrices returned;  
+//   PFTOptions *MyPFTOptions=InitPFTOptions();
+//   HMatrix *QPFT[8]={0,0,0,0,0,0,0,0};
+//   printf(" Getting PFT matrix Q...\n");
+//   bool NeedMatrix[8]={false, false, false, false, 
+//                       false, false, false, false}   
+//   NeedMatrix[SCUFF_PABS]=true; //which matrices are needed. 
+//   NeedMatrix[SCUFF_PSCA]=true;
+//   //NeedMatrix[SCUFF_XFORCE]=true;
+//   NeedMatrix[SCUFF_ZFORCE]=true;
+//   NeedMatrix[SCUFF_ZTORQUE]=true;
+//   numPFT = 4; 
+//   GetOPFTMatrices(G, 0, Omega, QPFT, NeedMatrix);
+//   //---------------------------------------------------------------//
+//   return QPFT; 
+// }//end GetQ
