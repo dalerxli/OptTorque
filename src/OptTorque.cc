@@ -388,11 +388,12 @@ int main(int argc, char *argv[])
   for(int nFreq=0; nFreq<OmegaList->N; nFreq++)
     { 
       Omega = SSD->Omega = OmegaList->GetEntry(nFreq);
-      z2s(Omega, WvnmStr);
+      z2s(Omega, OmegaStr);
       wvnm = 2.0*M_PI*1000.0/real(Omega); 
       snprintf(WvnmStr,MAXSTR,"%i",int(wvnm)); 
 
-      Log("Working at frequency %s...",WvnmStr);
+
+      Log("Working at frequency %s...",OmegaStr);
       /***************************************************************/
       /* assemble the BEM matrix at this frequency                   */
       /***************************************************************/
@@ -499,7 +500,7 @@ int main(int argc, char *argv[])
          GetOPFTMatrices(G, 0, Omega, QPFT, NeedMatrix);
 
          QPFT[SCUFF_PABS]->ExportToHDF5(HDF5Context, "QabsOPFT_%s",WvnmStr);
-         QPFT[SCUFF_XFORCE]->ExportToHDF5(HDF5Context, "QFXOPFT_%s",WvnmStr);
+         QPFT[SCUFF_ZFORCE]->ExportToHDF5(HDF5Context, "QFZOPFT_%s",WvnmStr);
          QPFT[SCUFF_ZTORQUE]->ExportToHDF5(HDF5Context, "QTZOPFT_%s",WvnmStr);
          printf(" Exported QPFT files to HDF5 format...\n");
        }//HDF5Context
