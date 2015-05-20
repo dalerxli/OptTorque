@@ -138,7 +138,6 @@ void VBeam::GetMN(const double X[3], int L, double aIn, cdouble M[3], cdouble N[
     M[j]=0.0; 
     N[j]=0.0;
   }
-
   /// Set M, N accordingly 
   if(r!=0.0){
     ////////////////////////////////////////	

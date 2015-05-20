@@ -3,7 +3,7 @@
  * Compute and store M and OPFT Q matrix 
  * for a given frequency
  * created      2015.05.09
- * last updated 2015.05.11
+ * last updated 2015.05.19
  *--------------------------------------------------------------*/
 #include <stdio.h>
 #include <math.h>
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
   if (GeoFile==0)
    OSUsage(argv[0],OSArray,"--geometry option is mandatory");
 
-    /*******************************************************************/
+  /*******************************************************************/
   /* process frequency-related options to construct a list of        */
   /* frequencies at which to run calculations                        */
   /*******************************************************************/
@@ -100,38 +100,28 @@ int main(int argc, char *argv[])
 
   delete G, M, Q; 
 }
-/***************************************************************/
-/***************************************************************/
-/***************************************************************/
-HMatrix* GetQ(RWGGeometry *G, cdouble Omega); 
-//---------------------------------------------------------------//
-//---------------------------------------------------------------//
-{ printf("GetQ FUNCTION IS CALLED.\n"); 
+
+//this function doesn't seem necessary. you should include it in OptTorque.
+HMatrix** GetQ(RWGGeometry *G, IncField *IF, cdouble Omega)
+{ 
+  // store Q matrices in the HDF5 file opened. 
+  printf("GetQ FUNCTION IS CALLED.\n"); 
+
   //---------------------------------------------------------------//
-  /// first realized for single frequency: can be extended later  
-  //---------------------------------------------------------------//
-  // cdouble Omega= 10.471975511965978;
   int numPFT = 0; // number of PFT matrices returned;  
-  double wvnm= 2.0*M_PI*1000.0/std::real(Omega);
-  //---------------------------------------------------------------//
   PFTOptions *MyPFTOptions=InitPFTOptions();
   HMatrix *QPFT[8]={0,0,0,0,0,0,0,0};
   printf(" Getting PFT matrix Q...\n");
-  bool NeedMatrix[8]={false, false, false, false, false, false, false, false}   NeedMatrix[SCUFF_PABS]=true; //which matrices are needed. 
-  //NeedMatrix[SCUFF_PSCA]=true;
-  NeedMatrix[SCUFF_XFORCE]=true;
-  //NeedMatrix[SCUFF_ZFORCE]=true;
+  bool NeedMatrix[8]={false, false, false, false, 
+                      false, false, false, false}   
+  NeedMatrix[SCUFF_PABS]=true; //which matrices are needed. 
+  NeedMatrix[SCUFF_PSCA]=true;
+  //NeedMatrix[SCUFF_XFORCE]=true;
+  NeedMatrix[SCUFF_ZFORCE]=true;
   NeedMatrix[SCUFF_ZTORQUE]=true;
-  numPFT = 3; 
-  //---------------------------------------------------------------//
+  numPFT = 4; 
   GetOPFTMatrices(G, 0, Omega, QPFT, NeedMatrix);
   //---------------------------------------------------------------//
-  // What does GetOPFTMatrices need? Does G need to have M ? 
-  // What is inside RWGGeometry G? 
-
-
+  // Store QPFT in HDF5
   return QPFT; 
 }//end GetQ
-//---------------------------------------------------------------//
-//---------------------------------------------------------------//
-//---------------------------------------------------------------//

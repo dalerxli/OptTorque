@@ -62,7 +62,7 @@ using namespace scuff;
 double GetIntegratedIntensity(RWGGeometry *G, 
                               int SurfaceIndex, HVector *RHSVector); 
 void VisualizeIncField(RWGGeometry *G, IncField *IF,
-                       double Omega, char *MeshFile);
+                       cdouble Omega, char *MeshFile);
 
 //void VisualizeFields(RWGGeometry *G, IncField *IF, HVector *KN,
 //                     cdouble Omega, char *MeshFileName);
@@ -393,11 +393,9 @@ int main(int argc, char *argv[])
      wvnm = 2.0*M_PI*1000.0/real(Omega); 
      z2s(Omega, OmegaStr);
      Log("Working at frequency %s...",OmegaStr);
-     /*******************************************************************/
-     /* assemble the BEM matrix at this frequency                       */
-     /*******************************************************************/
-     VisualizeIncField(G, IFDList, real(Omega), FVMeshes[1]); 
-
+     /***************************************************************/
+     /* assemble the BEM matrix at this frequency                   */
+     /***************************************************************/
      Log("Assembling BEM matrix...");
      if ( G->LDim==0 )
       G->AssembleBEMMatrix(Omega, M);
@@ -498,17 +496,13 @@ int main(int argc, char *argv[])
      /*--------------------------------------------------------------*/
      if (OPFTFile)
       WritePFTFile(SSD, PFTOpts, SCUFF_PFT_OVERLAP, PlotPFTFlux, OPFTFile);
-     
-     //         printf("Sanity Checkpoint 10 past \n");
-     if (EPPFTFile)
+y     if (EPPFTFile)
       WritePFTFile(SSD, PFTOpts, SCUFF_PFT_EP, PlotPFTFlux, EPPFTFile);
-     //         printf("Sanity Checkpoint 11 past \n");
      if (DSIPFTFile)
       WritePFTFile(SSD, PFTOpts, SCUFF_PFT_DSI, PlotPFTFlux, DSIPFTFile);
-     //         printf("Sanity Checkpoint 12 past \n");
      if (PFTFile) // default is overlap + EP for scattered power
       WritePFTFile(SSD, PFTOpts, SCUFF_PFT_DEFAULT, PlotPFTFlux, PFTFile);
-     //         printf("Sanity Checkpoint 13 past \n");
+
      /*--------------------------------------------------------------*/
      /*- panel source densities -------------------------------------*/
      /*--------------------------------------------------------------*/
@@ -538,9 +532,11 @@ int main(int argc, char *argv[])
      /*- field visualization meshes ---------------------------------*/
      /*--------------------------------------------------------------*/
      int nfm;
-     const char *FMMeshFilename; 
+     const char *FMMeshFilename;
      for(nfm=0; nfm<nFVMeshes; nfm++){
-     VisualizeFields(SSD, FVMeshes[nfm]);};
+       VisualizeIncField(SSD->G,SSD->IF,Omega,FVMeshes[nfm]); 
+       VisualizeFields(SSD, FVMeshes[nfm]);
+     };
      //         printf("Sanity Checkpoint 12 past \n");
 
    };
@@ -645,8 +641,6 @@ void VisualizeFields(RWGGeometry *G, IncField *IF, HVector *KN,
   /*--------------------------------------------------------------*/
   HMatrix *FMatrix=G->GetFields(IF, KN, Omega, 0,
                                 XMatrix, 0, FieldFuncs);
-
-
   /*--------------------------------------------------------------*/
   /*--------------------------------------------------------------*/
   /*--------------------------------------------------------------*/
@@ -713,11 +707,11 @@ void ProcessByEdgeArray(RWGGeometry *G, int ns, cdouble Omega,
  // free(ByEdge);
 }
 //--------------------------------------------------------------------//
-void VisualizeIncField(RWGGeometry *G, IncField *IF, double Omega, char *MeshFile)
+void VisualizeIncField(RWGGeometry *G, IncField *IF, cdouble Omega, char *MeshFile)
 {
   char GeoFileBase[100], PPFileName[100];
   strncpy(GeoFileBase,GetFileBase(G->GeoFileName),100);
-  snprintf(PPFileName,100,"%s.%s.Incfield.pp",GeoFileBase,GetFileBase(MeshFile));
+  snprintf(PPFileName,100,"%s.%s.FV.Incfield.pp",GeoFileBase,z2s(Omega));
   FILE *f=fopen(PPFileName,"a");
   if (!f)
    ErrExit("could not open field visualization file %s",PPFileName);
@@ -733,7 +727,6 @@ void VisualizeIncField(RWGGeometry *G, IncField *IF, double Omega, char *MeshFil
       XMatrix->SetEntry(nv, 1, S->Vertices[3*nv + 1]);
       XMatrix->SetEntry(nv, 2, S->Vertices[3*nv + 2]);
     };
-  //     get the incident fields at the panel vertices
   HMatrix *FMatrix=new HMatrix(XMatrix->NR, NUMFIELDFUNCS, LHM_COMPLEX);
   int ii,jj; 
   double X[3];
@@ -742,39 +735,67 @@ void VisualizeIncField(RWGGeometry *G, IncField *IF, double Omega, char *MeshFil
   for (jj=0;jj<XMatrix->NR;jj++){
     X[0]=XMatrix->HMatrix::GetEntryD(jj,0); 
     X[1]=XMatrix->HMatrix::GetEntryD(jj,1); 
-    X[2]=XMatrix->HMatrix::GetEntryD(jj,2);
-
-    G->GetFields(IF, 0 , Omega, 0,
-                                XMatrix, 0, FieldFuncs); 
-
-    for (ii=0;ii<3;ii++){
-      FMatrix->SetEntry(jj,ii,EH[ii]);
-    }
+    X[2]=XMatrix->HMatrix::GetEntryD(jj,2); 
+    //     get the incident fields at the panel vertices
+    FMatrix=G->GetFields(IF, 0, Omega, 0, XMatrix, 0, FieldFuncs); 
   }
   /*--------------------------------------------------------------*/
+  /*--------------------------------------------------------------*/
+  /*--------------------------------------------------------------*/
   for(int nff=0; nff<NUMFIELDFUNCS; nff++)
-    { 
-      fprintf(f,"View \"%s(%s)\" {\n",FieldTitles[nff],z2s(Omega));
-      /*--------------------------------------------------------------*/
-      for(int np=0; np<S->NumPanels; np++)
-        {
-          scuff::RWGPanel *P=S->Panels[np];
-          int iV1 = P->VI[0];  double *V1 = S->Vertices + 3*iV1;
-          int iV2 = P->VI[1];  double *V2 = S->Vertices + 3*iV2;
-          int iV3 = P->VI[2];  double *V3 = S->Vertices + 3*iV3;
-          fprintf(f,"ST(%e,%e,%e,%e,%e,%e,%e,%e,%e) {%e,%e,%e};\n",
-                  V1[0], V1[1], V1[2],
-                  V2[0], V2[1], V2[2],
-                  V3[0], V3[1], V3[2],
-                  FMatrix->GetEntryD(iV1,nff),
-                  FMatrix->GetEntryD(iV2,nff),
-                  FMatrix->GetEntryD(iV3,nff));
-        };
-      /*--------------------------------------------------------------*/
-      fprintf(f,"};\n\n");
-    };
+   {
+     fprintf(f,"View \"%s(%s)\" {\n",FieldTitles[nff],z2s(Omega));
+     /*--------------------------------------------------------------*/
+     /*--------------------------------------------------------------*/
+     /*--------------------------------------------------------------*/
+     for(int np=0; np<S->NumPanels; np++)
+      {
+        RWGPanel *P=S->Panels[np];
+        int iV1 = P->VI[0];  double *V1 = S->Vertices + 3*iV1;
+        int iV2 = P->VI[1];  double *V2 = S->Vertices + 3*iV2;
+        int iV3 = P->VI[2];  double *V3 = S->Vertices + 3*iV3;
+        
+        fprintf(f,"ST(%e,%e,%e,%e,%e,%e,%e,%e,%e) {%e,%e,%e};\n",
+                V1[0], V1[1], V1[2],
+                V2[0], V2[1], V2[2],
+                V3[0], V3[1], V3[2],
+                FMatrix->GetEntryD(iV1,nff),
+                FMatrix->GetEntryD(iV2,nff),
+                FMatrix->GetEntryD(iV3,nff));
+      };
+     /*--------------------------------------------------------------*/
+     /*--------------------------------------------------------------*/
+     /*--------------------------------------------------------------*/
+     fprintf(f,"};\n\n");
+   };
   fclose(f);
   delete FMatrix;
   delete XMatrix;
   delete S;
- }
+}
+
+
+//this function doesn't seem necessary. you should include it in OptTorque.
+HMatrix** GetQ(RWGGeometry *G, IncField *IF, cdouble Omega)
+{ 
+  // store Q matrices in the HDF5 file opened. 
+  printf("GetQ FUNCTION IS CALLED.\n"); 
+
+  //---------------------------------------------------------------//
+  int numPFT = 0; // number of PFT matrices returned;  
+  PFTOptions *MyPFTOptions=InitPFTOptions();
+  HMatrix *QPFT[8]={0,0,0,0,0,0,0,0};
+  printf(" Getting PFT matrix Q...\n");
+  bool NeedMatrix[8]={false, false, false, false, 
+                      false, false, false, false}   
+  NeedMatrix[SCUFF_PABS]=true; //which matrices are needed. 
+  NeedMatrix[SCUFF_PSCA]=true;
+  //NeedMatrix[SCUFF_XFORCE]=true;
+  NeedMatrix[SCUFF_ZFORCE]=true;
+  NeedMatrix[SCUFF_ZTORQUE]=true;
+  numPFT = 4; 
+  GetOPFTMatrices(G, 0, Omega, QPFT, NeedMatrix);
+  //---------------------------------------------------------------//
+  // Store QPFT in HDF5
+  return QPFT; 
+}//end GetQ
