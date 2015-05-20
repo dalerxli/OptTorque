@@ -14,56 +14,35 @@
 #include <libhrutil.h>
 #include <libscuff.h>
 #include "VBeam.h" 
-
-#ifndef cdouble
-  typedef std::complex<double> cdouble;
-#endif
-
 #define II cdouble(0.0,1.0)
+#define MAXSTR 100 
 using namespace scuff;
-namespace scuff{
-  //#define NUMPFT 8
-  void GetOPFTMatrices(RWGGeometry *G, int SurfaceIndex, cdouble Omega,
-		  HMatrix *QPFT[NUMPFT], bool NeedMatrix[NUMPFT]);
-}
+//---------------------------------------------------------------//
 void ShowPARMMatirx(HMatrix* PARMMatrix); 
 void ShowPARMMatirx(int numL, HMatrix* PARMMatrix);
-double objective(RWGGeometry *G, HMatrix *PARMMatrix,
-		 HMatrix *M, HMatrix *Q); 
+double objective(char* HDF5File, HMatrix *PARMMatrix,  cdouble Omega); 
 //---------------------------------------------------------------//
-//---------------------------------------------------------------//
-///LEFTOVER TASKS
-//---------------------------------------------------------------//
-// Import the Q matrix. 
-// then compute C_adj by doing LUSolve(M, QbarCbar) 
-//---------------------------------------------------------------//
-
 int main(int argc, char *argv[])
-  /// Objective 
-  /// 
-  /// READ In:
-  ///    parameter matrix PARMMatrix 
-  ///    BEM matrix A, LU Factorized
-  ///    PFT matrix Q 
 {
   /*--------------------------------------------------------------*/
   /*- process options  -------------------------------------------*/
   /*--------------------------------------------------------------*/
   /// Input arguments should be filenames. (pointers) 
+  cdouble OmegaVals[MAXFREQ];        int nOmegaVals;
   char *GeoFile=0; 
+  char *HDF5File=0; 
+  //  char *IFile=0;  // intensity is just read automatically ? 
   char *PARMMatrixFile=0;
-  char *BEMMatrixFile=0;
-  char *PFTMatrixFile=0;
   char *LogLevel=0;
-
   /* name    type   #args  max_instances  storage  count  description*/
   OptStruct OSArray[]=
    { 
-     {"geometry",   PA_STRING,  1, 1, (void *)&GeoFile,   0,  ".scuffgeo file"},
-     {"PARMMatrix", PA_STRING,  1, 1, (void *)&PARMMatrixFile, 0, "VParameters file"},
-     {"BEMMatrix",  PA_STRING,  1, 1, (void *)&BEMMatrixFile, 0,  "BEM Matrix datafile"},
-     {"PFTMatrix",  PA_STRING,  1, 1, (void *)&PFTMatrixFile, 0,  "PFT Matrix datafile"},
-     {"LogLevel",   PA_STRING,  1, 1, (void *)&LogLevel,   0, "none | terse | verbose | verbose2"},
+     {"geometry",   PA_STRING, 1, 1, (void *)&GeoFile,   0,  ".scuffgeo file"},
+     {"Omega",     PA_CDOUBLE, 1, MAXFREQ, (void *)OmegaVals, &nOmegaVals,  "(angular) frequency"},
+     {"PARMMatrix", PA_STRING, 1, 1, (void *)&PARMMatrixFile, 0, "VParameters file"},
+     //     {"IFile",      PA_STRING, 1, 1, (void *)&IFile,     0, "name of intensity file"},
+     {"HDF5File",   PA_STRING, 1, 1, (void *)&HDF5File,  0, "name of HDF5 file for OptTorque Matrix Data"},
+     {"LogLevel",   PA_STRING, 1, 1, (void *)&LogLevel,  0, "none | terse | verbose | verbose2"},
      //
      {0,0,0,0,0,0,0}
    };
@@ -73,82 +52,136 @@ int main(int argc, char *argv[])
    OSUsage(argv[0],OSArray,"--geometry option is mandatory");
   if (PARMMatrixFile==0)
    OSUsage(argv[0],OSArray,"--PARMMatrix option is mandatory");
-  if (BEMMatrixFile==0)
-   OSUsage(argv[0],OSArray,"--BEMMatrix option is mandatory");
+  if (HDF5File==0)
+   OSUsage(argv[0],OSArray,"--HDF5File option is mandatory");
 
-  RWGGeometry *G = new RWGGeometry(GeoFile);
+  HVector *OmegaList=0;
+  if (nOmegaVals>0) // process -- Omega options if present
+    {
+      OmegaList=new HVector(nOmegaVals, LHM_COMPLEX);
+      for(int n=0; n<nOmegaVals; n++)
+        OmegaList->SetEntry(n,OmegaVals[n]);
+    }
+  else 
+    OSUsage(argv[0], OSArray, "you must specify at least one frequency");
+
+  // RWGGeometry *G = new RWGGeometry(GeoFile);
+
   HMatrix *PARMMatrix = new HMatrix(PARMMatrixFile, LHM_TEXT);
   ShowPARMMatirx(PARMMatrix); 
-  HMatrix *M = new HMatrix(BEMMatrixFile, LHM_TEXT);
-  //A->LUFactorize(); //(already done)
-  HMatrix *Q = new HMatrix(PFTMatrixFile, LHM_TEXT);
-  objective(G, PARMMatrix, M, Q); 
 
-  delete G, PARMMatrix, M, Q; 
+  char OmegaStr[MAXSTR];
+  char WvnmStr[MAXSTR]; 
+  cdouble Omega; 
+  double wvnm; 
+  for(int nFreq=0; nFreq<OmegaList->N; nFreq++)
+    { 
+      Omega = OmegaList->GetEntry(nFreq); 
+      objective(HDF5File, PARMMatrix, Omega); 
+    }
+
+  delete PARMMatrix; 
 }
 /***************************************************************/
-/***************************************************************/
-/***************************************************************/
-double objective(RWGGeometry *G, HMatrix *PARMMatrix, HMatrix *M, HMatrix *Q)
+double objective(char *HDF5File, HMatrix *PARMMatrix, cdouble Omega)
+//add G
+// Intensity also important. 
 {
-  printf("OBJECTIVE FUNCTION IS CALLED.\n"); 
-  /// Input:
-  ///    parameter matrix PARMMatrix 
-  ///    BEM matrix M, LU Factorized
-  ///    PFT matrix Q 
-  /// COMPUTE:
+  z2s(Omega,OmegaStr); 
+  wvnm = 2.0*M_PI*1000.0/real(Omega); 
+  snprintf(WvnmStr,MAXSTR,"%i",int(wvnm)); 
+  Log("Working at frequency %s...",OmegaStr);
+
+  char IFilename[MAXSTR]; 
+  snprintf(IFilename,MAXSTR,"%s.1freq.Intensity.dat",GeoFileBase);  
+  fIntensity=fopen(IFilename,"a");
+
+  fprintf(fIntensity,"%s    %e\n",WvnmStr,Intensity); 
+  fclose(fIntensity); 
+  
+
+  // import matrices. 
+  void *HDF5Context=0;
+  HDF5Context=HMatrix::OpenHDF5Context(HDF5File);
+  Log("Opened HDF5Context ...");
+  HMatrix *M = new HMatrix(HDF5Context, LHM_HDF5, "M_%s",WvnmStr);
+  if (M->ErrMsg) ErrExit(M->ErrMsg);
+  int NR = M->NR; // number of rows 
+  HMatrix *MLU = new HMatrix(HDF5Context, LHM_HDF5, "MLU_%s",WvnmStr);
+  if (MLU->ErrMsg) ErrExit(MLU->ErrMsg);
+  HMatrix *QabsOPFT = new HMatrix(HDF5Context, LHM_HDF5,"QabsOPFT_%s",WvnmStr);
+  if (QabsOPFT->ErrMsg) ErrExit(QabsOPFT->ErrMsg);
+  HMatrix *QFZOPFT = new HMatrix(HDF5Context, LHM_HDF5, "QFZOPFT_%s",WvnmStr);
+  if (QFZOPFT->ErrMsg) ErrExit(QFZOPFT->ErrMsg);
+  HMatrix *QTZOPFT = new HMatrix(HDF5Context, LHM_HDF5, "QTZOPFT_%s",WvnmStr);
+  if (QTZOPFT->ErrMsg) ErrExit(QTZOPFT->ErrMsg);
+  Log(" Successfully imported all matrices...\n");
+
+  // from PARMMatrix, create IF and assemble RHS 
+    
+
+      Log("  Assembling the RHS vector..."); 
+      G->AssembleRHSVector(Omega, SSD->kBloch, IFDList, KN);
+        SSD->RHS->Copy(SSD->KN); // copy RHS vector for later 
+
+
+  HVector *RHS  = new HVector(HDF5Context, LHM_HDF5, "RHS_%s",WvnmStr);
+  if (RHS->ErrMsg) ErrExit(RHS->ErrMsg); 
+  HVector *KN   = new HVector(HDF5Context, LHM_HDF5, "KN_%s",WvnmStr);
+  if (KN->ErrMsg)  ErrExit(KN->ErrMsg);
+
   ///    RHS (sum aM+bN, GetRHSVector )
-  ///    KN=M\RHS (Surface current vector KN) 
-  /// 
-
-  //--------------------------------------------------------------------//
-  /// Simulate for single frequency                                  
-  //--------------------------------------------------------------------//
-  cdouble Omega= 10.471975511965978;
-  double wvnm= 2.0*M_PI*1000.0/std::real(Omega);
-
   double FOM =0.0; ///will be the output. 
-  HVector *KN = G->AllocateRHSVector();     
-  HVector *RHS= G->AllocateRHSVector();     
-  //--------------------------------------------------------------------//
-  /// Assemble and compute RHS 
-  //--------------------------------------------------------------------//
-  VBeam *VBInit = 0; //new GHBeam(HM,HN); 
-  VBInit=new VBeam(PARMMatrix); 
-  printf("VBInit properties\n");  
-  printf("VBInit->numL=%d\n",VBInit->numL); 
-  ShowPARMMatirx(VBInit->numL, VBInit->PMatrix); 
-  /// set up the incident field profile and assemble the RHS vector 
-  //--------------------------------------------------------------------//
-  IncField *IF=0; /// Assemble IF from PARMMatrix
-  IF=VBInit; ///
-  printf("IF is constructed\n");  
-  // double *kbloch; 
-  // double kblochval = 0.0; 
-  // kbloch = &kblochval; 
+  
+  
   G->AssembleRHSVector(Omega, IF, RHS); //KN and RHS are formed
   KN->Copy(RHS); // this is the RHS vector assembled. 
   M->LUSolve(KN);// solved KN. 
 
-  // Need Qmatrix and Cadj. this was already done in MatrixFOM old version. 
-  // you can use it again 
-  /*------------------------------------------------------------*/
-  /*------------------------------------------------------------*/
-  /*------------------------------------------------------------*/
-  PFTOptions *MyPFTOptions=InitPFTOptions();
-  HMatrix *QPFT[8]={0,0,0,0,0,0,0,0};
-  printf(" Getting PFT matrix Q...\n");
-  bool NeedMatrix[8]={false, false, false, false, false, false, false, false};
+  
+  // M*C_adj = transpose(QPFT)*conj(C)  
+  HMatrix *Qt = new HMatrix(QPFT[SCUFF_PABS]);
+  Qt->Transpose(); 
+  printf(" Computed Qt...\n");
+  HVector *Cconj  = new HVector(NR,LHM_COMPLEX);
+  HVector *Cadj = new HVector(NR,LHM_COMPLEX);
 
-  NeedMatrix[SCUFF_PABS]=true; //which matrices are needed. 
-  //NeedMatrix[SCUFF_PSCA]=true;
-  NeedMatrix[SCUFF_XFORCE]=true;
-  //NeedMatrix[SCUFF_ZFORCE]=true;
-  NeedMatrix[SCUFF_ZTORQUE]=true;
+  cdouble TEMPVAL = (0.0,0.0);
+  cdouble TEMPVAL2 = (0.0,0.0);
 
-  GetOPFTMatrices(G, 0, Omega, QPFT, NeedMatrix);
-  delete VBInit; 
-  return FOM; 
+  for(int ii=0;ii<NR;ii++)
+    {
+      TEMPVAL = KN->GetEntry(ii);
+      TEMPVAL = std::conj(TEMPVAL); 
+      Cconj->SetEntry(ii,TEMPVAL);
+
+      TEMPVAL2 = (0.0,0.0); 
+      for(int jj=0;jj<NR;jj++)
+        {
+          TEMPVAL2 += Qt->GetEntry(ii,jj)*TEMPVAL;
+          Cadj->SetEntry(ii,TEMPVAL2);
+        }
+    }
+  //  printf(" Computed Cconj...\n");
+  Cconj->ExportToHDF5(HDF5Context, "Cconj"); 
+  Qt->ExportToHDF5(HDF5Context, "Qt"); 
+  printf("size of Qt is : %i by %i\n",Qt->NR,Qt->NC);   
+  printf("size of Cconj is : %i\n",Cconj->N);   
+  
+  //  Qt->Multiply(Cconj,Cadj); // Cadj =Q t*Cconj
+  M_lu->LUSolve(Cadj);
+  Cadj->ExportToHDF5(HDF5Context, "Cadj"); //adjoint current solution
+  
+  /*-------------------------------------------------------------*/
+  /*- export the matrices into separate data files if asked  ----*/
+  /*-------------------------------------------------------------*/
+  char DatFile[100];
+  snprintf(DatFile, MAXSTR, "%s.%s.FOM.dat",GeoFileName,WvnmStr);  
+  f = fopen(DatFile,'a'); 
+  THIS->ExportToText(MatFileName,"--separate,"); 
+  fclose(f); 
+       }
+  HMatrix::CloseHDF5Context(HDF5Context); 
 }//end main 
 //--------------------------------------------------------------------//
 //--------------------------------------------------------------------//
@@ -184,45 +217,3 @@ void ShowPARMMatirx(int numL, HMatrix* PARMMatrix)
       printf("%d \t %f \t %f \t %f\n",L,aIn,aL,bL);
   }   
 }
-// //--------------------------------------------------------------------//
-//   //    Step 1: create an SSData struct
-//   //    Step 2: for SSData, define or compute: G, Omega, RHS, IF.
-//   //    Step 3: run SSD->GetFields 
-//   // typedef struct SSData
-//   // { RWGGeometry * G ;
-//   // HMatrix * M ;
-//   // HVector * RHS , * KN ;
-//   // cdouble Omega ;
-//   // double * kBloch ;
-//   // IncField * IF ;
-//   // double PowerRadius ;
-//   // } SSData ;
-
-//   //--------------------------------------------------------------//
-//   //- process options  -------------------------------------------//
-//   //--------------------------------------------------------------//
-//   char *GeoFile=0, *PARMMatrixFile=0, *MeshFileName=0; 
-//   cdouble OmegaVals[1];        int nOmegaVals;
-//   OptStruct OSArray[]=
-//    { /* name    type   #args  max_instances  storage  count  description*/
-//      {"geometry",   PA_STRING,  1, 1, (void *)&GeoFile,   0,  ".scuffgeo file"},
-//      {"Omega",      PA_CDOUBLE, 1, MAXFREQ, (void *)OmegaVals, &nOmegaVals,  "(angular) frequency"},
-//      {0,0,0,0,0,0,0} };
-//   ProcessOptions(argc, argv, OSArray);
-//   //--------------------------------------------------------------//
-//   if (GeoFile==0)
-//    OSUsage(argv[0],OSArray,"--geometry option is mandatory");
-//   if (nOmegaVals==0)
-//     OSUsage(argv[0], OSArray, "you must specify at least one frequency");
-//   //--------------------------------------------------------------//
-//   char PARMMatrixFile[100],PPFile[100];
-//   snprintf(PARMMatrixFile,MAXSTR,"VParameters");  
-//   HMatrix *PARMMatrix = new HMatrix(PARMMatrixFile, LHM_TEXT);
-//   //    Step 1: create an SSData struct
-//   SSData MySSDforTestMesh, *SSD = &MySSDforTestMesh; 
-//   //    Step 2: for SSData, define or compute: G, Omega, RHS, IF.
-//   RWGGeometry *G = SSD->G = new RWGGeometry(GeoFile);
-//   SSD->RHS = SSD->G->AllocateRHSVector();  
-//   cdouble Omega = SSD->Omega = OmegaVals[1]; 
-//   VBeam *VB = new VBEam(PARMMatrix); 
-//   IncField *IF = SSD->IF = VB; 
