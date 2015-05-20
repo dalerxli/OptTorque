@@ -61,6 +61,9 @@ using namespace scuff;
 /***************************************************************/
 double GetIntegratedIntensity(RWGGeometry *G, 
                               int SurfaceIndex, HVector *RHSVector); 
+void VisualizeIncField(RWGGeometry *G, IncField *IF,
+                       double Omega, char *MeshFile);
+
 //void VisualizeFields(RWGGeometry *G, IncField *IF, HVector *KN,
 //                     cdouble Omega, char *MeshFileName);
 //double **AllocateByEdgeArray(RWGGeometry *G, int ns);
@@ -203,25 +206,25 @@ int main(int argc, char *argv[])
   /*******************************************************************/
   HVector *OmegaList1=0, *OmegaList2=0, *OmegaList=0;
   if (OmegaFile) // process --OmegaFile option if present
-   { 
+    { 
      OmegaList1=new HVector(OmegaFile,LHM_TEXT);
      if (OmegaList1->ErrMsg)
       ErrExit(OmegaList1->ErrMsg);
    }
   if (nOmegaVals>0) // process -- Omega options if present
-   {
+    {
      OmegaList2=new HVector(nOmegaVals, LHM_COMPLEX);
      for(int n=0; n<nOmegaVals; n++)
-      OmegaList2->SetEntry(n,OmegaVals[n]);
+       OmegaList2->SetEntry(n,OmegaVals[n]);
    }
   if (  OmegaList1 && !OmegaList2 )
-   OmegaList=OmegaList1;
+    OmegaList=OmegaList1;
   else if ( !OmegaList1 && OmegaList2 )
-   OmegaList=OmegaList2;
+    OmegaList=OmegaList2;
   else if (  OmegaList1 && OmegaList2  )
-   OmegaList=Concat(OmegaList1, OmegaList2);
+    OmegaList=Concat(OmegaList1, OmegaList2);
   else 
-   OSUsage(argv[0], OSArray, "you must specify at least one frequency");
+    OSUsage(argv[0], OSArray, "you must specify at least one frequency");
 
   /*******************************************************************/
   /* process incident-field-related options to construct the data    */
@@ -381,6 +384,8 @@ int main(int argc, char *argv[])
   cdouble Eps, Mu;
   double wvnm;
 
+
+  
   for(int nFreq=0; nFreq<OmegaList->N; nFreq++)
    { 
      //       printf("Sanity Checkpoint 7 past \n");
@@ -391,6 +396,8 @@ int main(int argc, char *argv[])
      /*******************************************************************/
      /* assemble the BEM matrix at this frequency                       */
      /*******************************************************************/
+     VisualizeIncField(G, IFDList, real(Omega), FVMeshes[1]); 
+
      Log("Assembling BEM matrix...");
      if ( G->LDim==0 )
       G->AssembleBEMMatrix(Omega, M);
@@ -533,8 +540,9 @@ int main(int argc, char *argv[])
      int nfm;
      const char *FMMeshFilename; 
      for(nfm=0; nfm<nFVMeshes; nfm++){
-       VisualizeFields(SSD, FVMeshes[nfm]);};
+     VisualizeFields(SSD, FVMeshes[nfm]);};
      //         printf("Sanity Checkpoint 12 past \n");
+
    };
 
   /***************************************************************/
@@ -637,6 +645,8 @@ void VisualizeFields(RWGGeometry *G, IncField *IF, HVector *KN,
   /*--------------------------------------------------------------*/
   HMatrix *FMatrix=G->GetFields(IF, KN, Omega, 0,
                                 XMatrix, 0, FieldFuncs);
+
+
   /*--------------------------------------------------------------*/
   /*--------------------------------------------------------------*/
   /*--------------------------------------------------------------*/
@@ -702,3 +712,69 @@ void ProcessByEdgeArray(RWGGeometry *G, int ns, cdouble Omega,
  // free(ByEdge[0]);
  // free(ByEdge);
 }
+//--------------------------------------------------------------------//
+void VisualizeIncField(RWGGeometry *G, IncField *IF, double Omega, char *MeshFile)
+{
+  char GeoFileBase[100], PPFileName[100];
+  strncpy(GeoFileBase,GetFileBase(G->GeoFileName),100);
+  snprintf(PPFileName,100,"%s.%s.Incfield.pp",GeoFileBase,GetFileBase(MeshFile));
+  FILE *f=fopen(PPFileName,"a");
+  if (!f)
+   ErrExit("could not open field visualization file %s",PPFileName);
+
+  scuff::RWGSurface *S=new scuff::RWGSurface(MeshFile);
+  printf("Creating flux plot for surface %s...\n",MeshFile);
+  //    create an Nx3 XMatrix where each row is x,y,z of FVMesh. 
+  HMatrix *XMatrix=new HMatrix(S->NumVertices, 3);
+  printf("NumVertices of S is:%d \n ",S->NumVertices);
+  for(int nv=0; nv<S->NumVertices; nv++)
+    { 
+      XMatrix->SetEntry(nv, 0, S->Vertices[3*nv + 0]);
+      XMatrix->SetEntry(nv, 1, S->Vertices[3*nv + 1]);
+      XMatrix->SetEntry(nv, 2, S->Vertices[3*nv + 2]);
+    };
+  //     get the incident fields at the panel vertices
+  HMatrix *FMatrix=new HMatrix(XMatrix->NR, NUMFIELDFUNCS, LHM_COMPLEX);
+  int ii,jj; 
+  double X[3];
+  cdouble EH[6]; 
+  
+  for (jj=0;jj<XMatrix->NR;jj++){
+    X[0]=XMatrix->HMatrix::GetEntryD(jj,0); 
+    X[1]=XMatrix->HMatrix::GetEntryD(jj,1); 
+    X[2]=XMatrix->HMatrix::GetEntryD(jj,2);
+
+    G->GetFields(IF, 0 , Omega, 0,
+                                XMatrix, 0, FieldFuncs); 
+
+    for (ii=0;ii<3;ii++){
+      FMatrix->SetEntry(jj,ii,EH[ii]);
+    }
+  }
+  /*--------------------------------------------------------------*/
+  for(int nff=0; nff<NUMFIELDFUNCS; nff++)
+    { 
+      fprintf(f,"View \"%s(%s)\" {\n",FieldTitles[nff],z2s(Omega));
+      /*--------------------------------------------------------------*/
+      for(int np=0; np<S->NumPanels; np++)
+        {
+          scuff::RWGPanel *P=S->Panels[np];
+          int iV1 = P->VI[0];  double *V1 = S->Vertices + 3*iV1;
+          int iV2 = P->VI[1];  double *V2 = S->Vertices + 3*iV2;
+          int iV3 = P->VI[2];  double *V3 = S->Vertices + 3*iV3;
+          fprintf(f,"ST(%e,%e,%e,%e,%e,%e,%e,%e,%e) {%e,%e,%e};\n",
+                  V1[0], V1[1], V1[2],
+                  V2[0], V2[1], V2[2],
+                  V3[0], V3[1], V3[2],
+                  FMatrix->GetEntryD(iV1,nff),
+                  FMatrix->GetEntryD(iV2,nff),
+                  FMatrix->GetEntryD(iV3,nff));
+        };
+      /*--------------------------------------------------------------*/
+      fprintf(f,"};\n\n");
+    };
+  fclose(f);
+  delete FMatrix;
+  delete XMatrix;
+  delete S;
+ }
