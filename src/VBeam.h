@@ -22,9 +22,8 @@ class VBeam: public IncField
    ///////////////////////////
    // Bessel Beams: GetMN
  public:
-   HMatrix *PMatrix=new HMatrix(LMAX,4,LHM_REAL);  // Parameter matrix 
+   HMatrix *PMatrix=new HMatrix(LMAX,6,LHM_REAL);  // Parameter matrix 
    int numL; //number of modes summed in PMatrix (nonzero mode number);
-
    double Cxyz[3];    // beam center position [um]
    double nHat[3];    // propagation direction
 

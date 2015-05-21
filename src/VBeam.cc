@@ -22,14 +22,16 @@ VBeam::VBeam(int NewL, double NewaIn)
 { 
   PMatrix->SetEntry(0,0,NewL);    //L
   PMatrix->SetEntry(0,1,NewaIn);  //aIn
-  PMatrix->SetEntry(0,2,0.0);     //aL[L]
-  PMatrix->SetEntry(0,3,1.0);     //bL[L]
+  PMatrix->SetEntry(0,2,0.0);     //real aL[L]
+  PMatrix->SetEntry(0,3,1.0);     //real bL[L]
+  PMatrix->SetEntry(0,4,0.0);     //imag aL[L]
+  PMatrix->SetEntry(0,5,0.0);     //imag bL[L]
   numL= 1; 
  } 
 /**********************************************************************/
 VBeam::VBeam(HMatrix *NewPMatrix) 
 {
-  if ( NewPMatrix->NC!=4 )
+  if ( NewPMatrix->NC!=6 )
     ErrExit("%s:%i: NewPMatrix should have 4 columns.");
 
   if ( NewPMatrix->NR>25 )
@@ -42,6 +44,8 @@ VBeam::VBeam(HMatrix *NewPMatrix)
     PMatrix->SetEntry(iL,1,NewPMatrix->GetEntryD(iL,1)); 
     PMatrix->SetEntry(iL,2,NewPMatrix->GetEntryD(iL,2)); 
     PMatrix->SetEntry(iL,3,NewPMatrix->GetEntryD(iL,3)); 
+    PMatrix->SetEntry(iL,4,NewPMatrix->GetEntryD(iL,4)); 
+    PMatrix->SetEntry(iL,5,NewPMatrix->GetEntryD(iL,5)); 
   }
 }
 /**********************************************************************/
@@ -72,30 +76,33 @@ void VBeam::GetFields(const double X[3], cdouble EH[6])
     EH[j]=0.0; 
   
   int iL, L; 
-  double aIn,aL,bL; 
+  double aIn,ar,br,ai,bi; 
   cdouble M[3], N[3]; 
   for(iL=0; iL<numL; iL++) //for each row of PMatrix
     {
       L   =PMatrix->GetEntryD(iL,0);
       aIn =PMatrix->GetEntryD(iL,1);
-      aL  =PMatrix->GetEntryD(iL,2);
-      bL  =PMatrix->GetEntryD(iL,3);
-      //      printf("aL=%f,bL=%f\n",aL,bL);
-      if(aL==0.0&&bL==0.0){}///don't run GetMN if coeff.s are zero
+      ar  =PMatrix->GetEntryD(iL,2);
+      br  =PMatrix->GetEntryD(iL,3);
+      ai = PMatrix->GetEntryD(iL,4);
+      bi  =PMatrix->GetEntryD(iL,5);
+
+      //      printf("ar=%f,br=%f\n",ar,br);
+      if(ar==0.0&&br==0.0==ai==0.0&&bi==0.0){}///don't run GetMN if coeff.s are zero
       else{
         VBeam::GetMN(X,L,aIn,M,N);
-        EH[0]+=-(aL*M[0]);
-        EH[0]+=-(bL*N[0]);
-        EH[1]+=-(aL*M[1]);
-        EH[1]+=-(bL*N[1]);
-        EH[2]+=-(aL*M[2]);
-        EH[2]+=-(bL*N[2]);
-        EH[3]+=-(bL*M[0])/(II*Z);
-        EH[3]+=-(aL*N[0])/(II*Z);
-        EH[4]+=-(bL*M[1])/(II*Z);
-        EH[4]+=-(aL*N[1])/(II*Z);
-        EH[5]+=-(bL*M[2])/(II*Z);
-        EH[5]+=-(aL*N[2])/(II*Z);
+        EH[0]+=-((ar+II*ai)*M[0]);
+        EH[0]+=-((br+II*bi)*N[0]);
+        EH[1]+=-((ar+II*ai)*M[1]);
+        EH[1]+=-((br+II*bi)*N[1]);
+        EH[2]+=-((ar+II*ai)*M[2]);
+        EH[2]+=-((br+II*bi)*N[2]);
+        EH[3]+=-((br+II*bi)*M[0])/(II*Z);
+        EH[3]+=-((ar+II*ai)*N[0])/(II*Z);
+        EH[4]+=-((br+II*bi)*M[1])/(II*Z);
+        EH[4]+=-((ar+II*ai)*N[1])/(II*Z);
+        EH[5]+=-((br+II*bi)*M[2])/(II*Z);
+        EH[5]+=-((ar+II*ai)*N[2])/(II*Z);
       }
     }
  }//end GetField
