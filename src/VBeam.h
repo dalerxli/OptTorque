@@ -12,7 +12,7 @@
 /**********************************************************************/
 /**********************************************************************/
 /**********************************************************************/
- class VBeam: public IncField
+class VBeam: public IncField
  {
    ///////////////////////////
    // class for VectorBeam construction ( allows superposed beam input )
@@ -22,12 +22,10 @@
    ///////////////////////////
    // Bessel Beams: GetMN
  public:
-   HMatrix *PMatrix=new HMatrix(LMAX,4,LHM_REAL);  // Parameter matrix 
+   HMatrix *PMatrix=new HMatrix(LMAX,6,LHM_REAL);  // Parameter matrix 
    int numL; //number of modes summed in PMatrix (nonzero mode number);
-
    double Cxyz[3];    // beam center position [um]
    double nHat[3];    // propagation direction
-   cdouble M[3],N[3]; // Orthogonal Vector Fields
 
    VBeam(int NewL, double NewaIn);
    VBeam(HMatrix *NewPMatrix);

@@ -3,8 +3,8 @@ SHELL=/bin/bash
 SCUFFEM = $(HOME)/git/scuff-em-installation
 SCUFFEM2 = $(HOME)/git/scuff-em/src/libs/libscuff
 
-#CXXFLAGS = -O2 -fopenmp -lm -std=c++11
-CXXFLAGS = -O0 -ggdb -fopenmp -lm -std=c++11
+CXXFLAGS = -O2 -fopenmp -lm -std=c++11
+#CXXFLAGS = -O0 -ggdb -fopenmp -lm -std=c++11
 
 CPPFLAGS += -I$(SCUFFEM)/include/scuff-em
 CPPFLAGS += -I$(SCUFFEM2)
