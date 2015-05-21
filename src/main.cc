@@ -19,6 +19,7 @@ double objective(RWGGeometry *G, char *HDF5File, HMatrix *PARMMatrix,
 //---------------------------------------------------------------//
 double myfunc(unsigned n, const double *x, double *grad, void *my_func_data)
 {
+  //Owen comment on const "const correctness"  for input. notforscuff
     if (grad) {
         grad[0] = 0.0;
         grad[1] = 0.5 / sqrt(x[1]);

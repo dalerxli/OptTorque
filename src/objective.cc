@@ -26,6 +26,12 @@ double objective(RWGGeometry *G, char *HDF5File, HMatrix *PARMMatrix, cdouble Om
 //---------------------------------------------------------------//
 int main(int argc, char *argv[])
 {
+  // 1. read PARMMatrix. 
+  //    force it into a 50 x x 1 vector, call it c. 
+  // 2. construct RHS for each set of L and aIn. 
+  //    For each 4 rows, construct an RHS like in updating IFDList     
+  //    After having an updated 
+
   /*--------------------------------------------------------------*/
   /*- process options  -------------------------------------------*/
   /*--------------------------------------------------------------*/
@@ -81,6 +87,15 @@ int main(int argc, char *argv[])
 /***************************************************************/
 double objective(RWGGeometry *G, char *HDF5File, HMatrix *PARMMatrix, cdouble Omega)
 {
+  // for the actual objective function, n will be 144.
+  // the c vector will contain ar,br,ai,bi for each L/alpha combination. 
+
+  // getintegratedintensity can be called to give 36 values of intensity. 
+
+ 
+
+  // The input vector should be 50 x 1, a long vector from HMatrix. 
+
   cdouble dFOM =0.0; ///will be the output. 
 
   char OmegaStr[MAXSTR];
@@ -168,7 +183,7 @@ double objective(RWGGeometry *G, char *HDF5File, HMatrix *PARMMatrix, cdouble Om
 
   printf("dFOM = %e+%ei\n",real(dFOM),imag(dFOM));
   //HMatrix::CloseHDF5Context(HDF5Context); 
-}//end main 
+}
 
 //--------------------------------------------------------------------//
 //--------------------------------------------------------------------//
