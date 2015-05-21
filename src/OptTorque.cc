@@ -428,7 +428,7 @@ int main(int argc, char *argv[])
      /* export BEM matrix to a binary .hdf5 file if that was requested  */
      /*******************************************************************/
       if (HDF5Context)
-        M->ExportToHDF5(HDF5Context,"M_%s",WvnmStr);
+        M->ExportToHDF5(HDF5Context,"M");
      /*******************************************************************/
      /* if the user requested no output options (for example, if she   **/
      /* just wanted to export the matrix to a binary file), don't      **/
@@ -445,7 +445,7 @@ int main(int argc, char *argv[])
       /*******************************************************************/
       double Intensity=GetIntegratedIntensity(G, 0, KN);
       fIntensity=fopen(IFilename,"a");
-      fprintf(fIntensity,"%s    %e\n",WvnmStr,Intensity); 
+      fprintf(fIntensity,"%s    %e\n",OmegaStr,Intensity); 
       fclose(fIntensity); 
       SSD->RHS->Copy(SSD->KN); // copy RHS vector for later 
       /*******************************************************************/
@@ -456,7 +456,7 @@ int main(int argc, char *argv[])
       M->LUFactorize();
 
       if (HDF5Context)
-        M->ExportToHDF5(HDF5Context,"MLU_%s",WvnmStr);
+        M->ExportToHDF5(HDF5Context,"MLU");
       /***************************************************************/
       /* solve the BEM system*****************************************/
       /***************************************************************/
@@ -464,8 +464,8 @@ int main(int argc, char *argv[])
       M->LUSolve(KN);
       
       if (HDF5Context)
-        { SSD->RHS->ExportToHDF5(HDF5Context,"RHS_%s",WvnmStr);
-          SSD->KN->ExportToHDF5(HDF5Context,"KN_%s",WvnmStr);
+        { SSD->RHS->ExportToHDF5(HDF5Context,"RHS");
+          SSD->KN->ExportToHDF5(HDF5Context,"KN");
         }
       
       /***************************************************************/
@@ -486,11 +486,12 @@ int main(int argc, char *argv[])
       /*--------------------------------------------------------------*/
       /*- Store HMatrix** QPFT from OPFT Method 
       /*--------------------------------------------------------------*/
+     
+     HMatrix *QPFT[8]={0,0,0,0,0,0,0,0};
      if(HDF5Context)
        {
          Log("  Storing QPFT..."); 
          PFTOptions *MyPFTOptions=InitPFTOptions();
-         HMatrix *QPFT[8]={0,0,0,0,0,0,0,0};
          printf(" Getting PFT matrix Q...\n");
          bool NeedMatrix[8]={false, false, false, false, 
                              false, false, false, false};
@@ -499,9 +500,9 @@ int main(int argc, char *argv[])
          NeedMatrix[SCUFF_ZTORQUE]=true;
          GetOPFTMatrices(G, 0, Omega, QPFT, NeedMatrix);
 
-         QPFT[SCUFF_PABS]->ExportToHDF5(HDF5Context, "QabsOPFT_%s",WvnmStr);
-         QPFT[SCUFF_ZFORCE]->ExportToHDF5(HDF5Context, "QFZOPFT_%s",WvnmStr);
-         QPFT[SCUFF_ZTORQUE]->ExportToHDF5(HDF5Context, "QTZOPFT_%s",WvnmStr);
+         QPFT[SCUFF_PABS]->ExportToHDF5(HDF5Context, "QabsOPFT");
+         QPFT[SCUFF_ZFORCE]->ExportToHDF5(HDF5Context, "QFZOPFT");
+         QPFT[SCUFF_ZTORQUE]->ExportToHDF5(HDF5Context, "QTZOPFT");
          printf(" Exported QPFT files to HDF5 format...\n");
        }//HDF5Context
      /*--------------------------------------------------------------*/
@@ -524,7 +525,7 @@ int main(int argc, char *argv[])
      /*- surface current visualization-------------------------------*/
      /*--------------------------------------------------------------*/
      if (PlotSurfaceCurrents)
-       G->PlotSurfaceCurrents(KN, Omega, "%s.%s.pp",GeoFileBase,WvnmStr);
+       G->PlotSurfaceCurrents(KN, Omega, "%s.%s.pp",GeoFileBase,OmegaStr);
 
      /*--------------------------------------------------------------*/
      /*- field visualization meshes ---------------------------------*/
@@ -541,12 +542,18 @@ int main(int argc, char *argv[])
      if(MatrixOut)
        {
          char MatFileName[100];
-         snprintf(MatFileName, 100, "Mat_RHS_%snm.dat",WvnmStr);  
+         snprintf(MatFileName, 100, "Mat_RHS.dat");  
          SSD->RHS->ExportToText(MatFileName,"--separate,"); 
-         snprintf(MatFileName, 100,"Mat_M_%snm.dat",WvnmStr);
+         snprintf(MatFileName, 100,"Mat_MLU.dat");
          SSD->M->ExportToText(MatFileName,"--separate,"); 
-         snprintf(MatFileName, 100,"Mat_KN_%snm.dat",WvnmStr);
+         snprintf(MatFileName, 100,"Mat_KN.dat");
          SSD->KN->ExportToText(MatFileName,"--separate,");  
+         snprintf(MatFileName, 100,"Mat_QabsOPFT.dat");
+         QPFT[SCUFF_PABS]->ExportToText(MatFileName,"--separate,");
+         snprintf(MatFileName, 100,"Mat_QFZOPFT.dat");
+         QPFT[SCUFF_ZFORCE]->ExportToText(MatFileName,"--separate,");
+         snprintf(MatFileName, 100,"Mat_QTZOPFT.dat");
+         QPFT[SCUFF_ZTORQUE]->ExportToText(MatFileName,"--separate,");
        }
     };//frequency loop 
   if (HDF5Context)
