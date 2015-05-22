@@ -2,7 +2,7 @@
  * main.cc  
  * runs the nlopt routine using objective function 
  * created 2015.05.21
- * last updated on 2015.05.21
+ * last updated on 2015.05.22
  *--------------------------------------------------------------*/
 #include <stdio.h>
 #include <math.h>
@@ -41,6 +41,25 @@ double myconstraint(unsigned n, const double *x, double *grad, void *data)
     }
     return ((a*x[0] + b) * (a*x[0] + b) * (a*x[0] + b) - x[1]);
  }
+
+
+double OTobj(unsigned n, const double *x, double *grad, void *my_func_data)
+{
+  //Owen comment on "const correctness"  for input. notforscuff
+
+  // double *x contains a ('5x5=30' by '1') vector, 
+  // alpha, ar, br, ai, bi 
+  // for each 5 elements in x, construct a RHS 
+  // calculate normalization intensity 
+
+
+    if (grad) {
+        grad[0] = 0.0;
+        grad[1] = 0.5 / sqrt(x[1]);
+    }
+    return FOM;
+}
+
 //---------------------------------------------------------------//
 int main(int argc, char *argv[]){
   //nlopt_set_upper_bounds; 
@@ -101,8 +120,45 @@ int main(int argc, char *argv[]){
   delete PARMMatrix; 
 }
 /***************************************************************/
-double objective(RWGGeometry *G, char *HDF5File, HMatrix *PARMMatrix, cdouble Omega)
+double* OTgetx(HMatrix *P)
+// function OTgetx creates a x vector. 
 {
+  int NR = PARMMatrix->NR; 
+  int n = NR*5; 
+  double x[n]=0; 
+  for (int j=0;j<NR;j++)
+    {
+      x[j*5]  =P->GetEntry(j,1);   //aIn 
+      x[j*5+1]=P->GetEntry(j,2); //ar
+      x[j*5+2]=P->GetEntry(j,3); //br
+      x[j*5+3]=P->GetEntry(j,4); //ai
+      x[j*5+4]=P->GetEntry(j,5); //bi
+    } 
+  return x; 
+}
+HMatrix* OTgetP(double *x)
+// function OTgetx creates a x vector. 
+{
+  int NR = PARMMatrix->NR; 
+  int n = NR*5; 
+  double x[n]=0; 
+  for (int j=0;j<NR;j++)
+    {
+      x[j*5]  =P->GetEntry(j,1);   //aIn 
+      x[j*5+1]=P->GetEntry(j,2); //ar
+      x[j*5+2]=P->GetEntry(j,3); //br
+      x[j*5+3]=P->GetEntry(j,4); //ai
+      x[j*5+4]=P->GetEntry(j,5); //bi
+    } 
+  return P; 
+}
+
+
+
+
+  double objective(RWGGeometry *G, char *HDF5File, HMatrix *PARMMatrix, cdouble Omega)
+{
+  
   cdouble dFOM =0.0; ///will be the output. 
 
   char OmegaStr[MAXSTR];
@@ -190,95 +246,4 @@ double objective(RWGGeometry *G, char *HDF5File, HMatrix *PARMMatrix, cdouble Om
 
   printf("dFOM = %e+%ei\n",real(dFOM),imag(dFOM));
   return dFOM; 
-}//end main 
-
-//--------------------------------------------------------------------//
-//--------------------------------------------------------------------//
-//--------------------------------------------------------------------//
-void ShowPARMMatirx(HMatrix* PARMMatrix)
-{
-  int iL, L; 
-  double aIn, aL, bL; 
-  printf("PARMMatrix: \n"); 
-  printf("L \t aIn \t\t aL \t\t bL\n"); 
-  for(iL=0; iL<PARMMatrix->NR; iL++) //for each row of PARMMatrix
-    {
-      L   =PARMMatrix->GetEntryD(iL,0);
-      aIn =PARMMatrix->GetEntryD(iL,1);
-      aL  =PARMMatrix->GetEntryD(iL,2);
-      bL  =PARMMatrix->GetEntryD(iL,3);
-      printf("%d \t %f \t %f \t %f\n",L,aIn,aL,bL);
-  }   
-}
-//--------------------------------------------------------------------//
-void ShowPARMMatirx(int numL, HMatrix* PARMMatrix)
-{//length of PARMMatrix specified 
-  int iL, L; 
-  double aIn, aL, bL; 
-  printf("PARMMatrix: \n"); 
-  printf("L \t aIn \t\t aL \t\t bL\n"); 
-  for(iL=0; iL<numL; iL++) //for each row of PARMMatrix
-    {
-      L   =PARMMatrix->GetEntryD(iL,0);
-      aIn =PARMMatrix->GetEntryD(iL,1);
-      aL  =PARMMatrix->GetEntryD(iL,2);
-      bL  =PARMMatrix->GetEntryD(iL,3);
-      printf("%d \t %f \t %f \t %f\n",L,aIn,aL,bL);
-  }   
-}
-//--------------------------------------------------------------------//
-double GetIntegratedIntensity(RWGGeometry *G, int SurfaceIndex, HVector *RHSVector)
-{
-  RWGSurface *S = G->Surfaces[SurfaceIndex];
-  bool IsPEC    = S->IsPEC;
-  int BFOffset  = G->BFIndexOffset[SurfaceIndex];
-  int NE        = S->NumEdges;
-  int NBF       = IsPEC ? NE : 2*NE;
-
-  /***************************************************************/
-  /* construct and LU-factorize the overlap matrix               */
-  /***************************************************************/
-  HMatrix *M=new HMatrix(NBF, NBF, RHSVector->RealComplex);
-  M->Zero();
-  Log("GetIntegratedIntensity: Assembling S");
-  for(int ne=0; ne<S->NumEdges; ne++)
-   for(int nep=ne; nep<S->NumEdges; nep++)
-    { 
-      double OVLP=S->GetOverlap(ne, nep);
-      if (IsPEC)
-       { M->SetEntry( ne,  nep, OVLP);
-         M->SetEntry( nep, ne,  OVLP);
-       }
-      else
-       { 
-         M->SetEntry( 2*ne, 2*nep, OVLP);
-         M->SetEntry( 2*nep, 2*ne, OVLP);
-
-         M->SetEntry( 2*ne+1, 2*nep+1, OVLP);
-         M->SetEntry( 2*nep+1, 2*ne+1, OVLP);
-       };
-    };
-  M->LUFactorize();
-
-  HVector *V=new HVector(NBF, RHSVector->RealComplex);
-  HVector *MInvV=new HVector(NBF, RHSVector->RealComplex);
-  for(int nbf=0; nbf<NBF; nbf++)
-   { V->SetEntry(nbf, RHSVector->GetEntry(BFOffset+nbf));
-     MInvV->SetEntry(nbf, RHSVector->GetEntry(BFOffset+nbf));
-   };
-  M->LUSolve(MInvV);
-
-  double Intensity=0.0;
-  for(int nbf=0; nbf<NBF; nbf++)
-   Intensity += real( conj(V->GetEntry(nbf)) * MInvV->GetEntry(nbf) );
-  
-  delete M;
-  delete V;
-  delete MInvV;
-
-  return ZVAC*ZVAC*Intensity;
-/********************************************************************/
-/* return 0 if X lies outside the triangle with the given vertices, */
-/* or a positive integer otherwise.                                 */
-/********************************************************************/
-}//end getintegratedintensities
+}//end objective 

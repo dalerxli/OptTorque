@@ -3,7 +3,7 @@
  * compute Torque FOM
  * for a given BEM matrix, OPFT matrix, frequency, and PARMMatrix
  * created 2015.03
- * last updated on 2015.05.19
+ * last updated on 2015.05.22
  *--------------------------------------------------------------*/
 #include <stdio.h>
 #include <math.h>
@@ -21,21 +21,13 @@
 
 #define II cdouble(0.0,1.0)
 using namespace scuff;
-namespace scuff{
-  //#define NUMPFT 8
-  void GetOPFTMatrices(RWGGeometry *G, int SurfaceIndex, cdouble Omega,
-		  HMatrix *QPFT[NUMPFT], bool NeedMatrix[NUMPFT]);
-}
+
 void ShowPARMMatirx(HMatrix* PARMMatrix); 
-void ShowPARMMatirx(int numL, HMatrix* PARMMatrix);
 double objective(RWGGeometry *G, HMatrix *PARMMatrix,
 		 HMatrix *M, HMatrix *Q); 
 //---------------------------------------------------------------//
 //---------------------------------------------------------------//
 ///LEFTOVER TASKS
-//---------------------------------------------------------------//
-// Import the Q matrix. 
-// then compute C_adj by doing LUSolve(M, QbarCbar) 
 //---------------------------------------------------------------//
 
 int main(int argc, char *argv[])
@@ -151,78 +143,3 @@ double objective(RWGGeometry *G, HMatrix *PARMMatrix, HMatrix *M, HMatrix *Q)
   return FOM; 
 }//end main 
 //--------------------------------------------------------------------//
-//--------------------------------------------------------------------//
-//--------------------------------------------------------------------//
-void ShowPARMMatirx(HMatrix* PARMMatrix)
-{
-  int iL, L; 
-  double aIn, aL, bL; 
-  printf("PARMMatrix: \n"); 
-  printf("L \t aIn \t\t aL \t\t bL\n"); 
-  for(iL=0; iL<PARMMatrix->NR; iL++) //for each row of PARMMatrix
-    {
-      L   =PARMMatrix->GetEntryD(iL,0);
-      aIn =PARMMatrix->GetEntryD(iL,1);
-      aL  =PARMMatrix->GetEntryD(iL,2);
-      bL  =PARMMatrix->GetEntryD(iL,3);
-      printf("%d \t %f \t %f \t %f\n",L,aIn,aL,bL);
-  }   
-}
-//--------------------------------------------------------------------//
-void ShowPARMMatirx(int numL, HMatrix* PARMMatrix)
-{//length of PARMMatrix specified 
-  int iL, L; 
-  double aIn, aL, bL; 
-  printf("PARMMatrix: \n"); 
-  printf("L \t aIn \t\t aL \t\t bL\n"); 
-  for(iL=0; iL<numL; iL++) //for each row of PARMMatrix
-    {
-      L   =PARMMatrix->GetEntryD(iL,0);
-      aIn =PARMMatrix->GetEntryD(iL,1);
-      aL  =PARMMatrix->GetEntryD(iL,2);
-      bL  =PARMMatrix->GetEntryD(iL,3);
-      printf("%d \t %f \t %f \t %f\n",L,aIn,aL,bL);
-  }   
-}
-// //--------------------------------------------------------------------//
-//   //    Step 1: create an SSData struct
-//   //    Step 2: for SSData, define or compute: G, Omega, RHS, IF.
-//   //    Step 3: run SSD->GetFields 
-//   // typedef struct SSData
-//   // { RWGGeometry * G ;
-//   // HMatrix * M ;
-//   // HVector * RHS , * KN ;
-//   // cdouble Omega ;
-//   // double * kBloch ;
-//   // IncField * IF ;
-//   // double PowerRadius ;
-//   // } SSData ;
-
-//   //--------------------------------------------------------------//
-//   //- process options  -------------------------------------------//
-//   //--------------------------------------------------------------//
-//   char *GeoFile=0, *PARMMatrixFile=0, *MeshFileName=0; 
-//   cdouble OmegaVals[1];        int nOmegaVals;
-//   OptStruct OSArray[]=
-//    { /* name    type   #args  max_instances  storage  count  description*/
-//      {"geometry",   PA_STRING,  1, 1, (void *)&GeoFile,   0,  ".scuffgeo file"},
-//      {"Omega",      PA_CDOUBLE, 1, MAXFREQ, (void *)OmegaVals, &nOmegaVals,  "(angular) frequency"},
-//      {0,0,0,0,0,0,0} };
-//   ProcessOptions(argc, argv, OSArray);
-//   //--------------------------------------------------------------//
-//   if (GeoFile==0)
-//    OSUsage(argv[0],OSArray,"--geometry option is mandatory");
-//   if (nOmegaVals==0)
-//     OSUsage(argv[0], OSArray, "you must specify at least one frequency");
-//   //--------------------------------------------------------------//
-//   char PARMMatrixFile[100],PPFile[100];
-//   snprintf(PARMMatrixFile,MAXSTR,"VParameters");  
-//   HMatrix *PARMMatrix = new HMatrix(PARMMatrixFile, LHM_TEXT);
-//   //    Step 1: create an SSData struct
-//   SSData MySSDforTestMesh, *SSD = &MySSDforTestMesh; 
-//   //    Step 2: for SSData, define or compute: G, Omega, RHS, IF.
-//   RWGGeometry *G = SSD->G = new RWGGeometry(GeoFile);
-//   SSD->RHS = SSD->G->AllocateRHSVector();  
-//   cdouble Omega = SSD->Omega = OmegaVals[1]; 
-//   VBeam *VB = new VBEam(PARMMatrix); 
-//   IncField *IF = SSD->IF = VB; 
