@@ -3,16 +3,14 @@
  *                 -- for solving scattering problems
  *                 -- modeled after scuff-scatter.h 
  *
- * homer reid      -- 6/2011--2/2012
+ * Homer Reid            -- 6/2011--2/2012
  * Yoonkyung Eunnie Lee  -- 2015.02.25
- * updates to v11:GetIntegratedIntensity added 
- * 
  */
 #ifndef OPTTORQUE_H
 #define OPTTORQUE_H 
 
-#include <libhrutil.h>
-#include <libhmat.h>
+#include "libhrutil.h"
+#include "libhmat.h"
 #include "libIncField.h"
 #include "libscuff.h"
 

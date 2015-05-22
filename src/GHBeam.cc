@@ -8,9 +8,8 @@
 #include <string.h>//for memcpy
 #include <complex>
 #include <math.h>
+#include "libIncField.h"
 #include "GHBeam.h"
-
-#include <libIncField.h>
 #define II cdouble(0.0,1.0)
 
 double hn_polynomial_value ( int n, double x );
@@ -305,7 +304,6 @@ void GHBeam::GetFields(const double X[3], cdouble EH[6])
   EH[4] = (nHat[2]*EH[0] - nHat[0]*EH[2]) / Z;
   EH[5] = (nHat[0]*EH[1] - nHat[1]*EH[0]) / Z;
 }
-
 /**********************************************************************/
 /* Polynomials                            *****************************/
 /**********************************************************************/

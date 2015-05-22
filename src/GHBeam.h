@@ -1,7 +1,6 @@
 /*
  * GHBeam.h   -- definition for the GHBeam implementation
  *            -- of the IncField class
- * v13
  */
 
 #ifndef GHBEAM_H

@@ -1,9 +1,5 @@
 /*
- * VBeam.cc   -- Vectorbeam implementation of the
- *                IncField class
- * 
- * v15. : changed coefficients for EH summation (-1/(II*Z))
- * v16. : GetField is debugged to take correct HMatrix Input 
+ * VBeam.cc   -- Vectorbeam implementation of the IncField class
  */
 #include <stdio.h>
 #include <cstdlib> //for abs
@@ -14,22 +10,22 @@
 #include <libIncField.h>
 #define II cdouble(0.0,1.0)
 /**********************************************************************/
-/**********************************************************************/
-/**********************************************************************/
 VBeam::VBeam(int NewL, double NewaIn) 
 // VBeam initialization for a single mode
 // Default is to use radial polarization (bL[L]=1)
 { 
   PMatrix->SetEntry(0,0,NewL);    //L
   PMatrix->SetEntry(0,1,NewaIn);  //aIn
-  PMatrix->SetEntry(0,2,0.0);     //aL[L]
-  PMatrix->SetEntry(0,3,1.0);     //bL[L]
+  PMatrix->SetEntry(0,2,0.0);     //real aL[L]
+  PMatrix->SetEntry(0,3,1.0);     //real bL[L]
+  PMatrix->SetEntry(0,4,0.0);     //imag aL[L]
+  PMatrix->SetEntry(0,5,0.0);     //imag bL[L]
   numL= 1; 
  } 
 /**********************************************************************/
 VBeam::VBeam(HMatrix *NewPMatrix) 
 {
-  if ( NewPMatrix->NC!=4 )
+  if ( NewPMatrix->NC!=6 )
     ErrExit("%s:%i: NewPMatrix should have 4 columns.");
 
   if ( NewPMatrix->NR>25 )
@@ -42,12 +38,14 @@ VBeam::VBeam(HMatrix *NewPMatrix)
     PMatrix->SetEntry(iL,1,NewPMatrix->GetEntryD(iL,1)); 
     PMatrix->SetEntry(iL,2,NewPMatrix->GetEntryD(iL,2)); 
     PMatrix->SetEntry(iL,3,NewPMatrix->GetEntryD(iL,3)); 
+    PMatrix->SetEntry(iL,4,NewPMatrix->GetEntryD(iL,4)); 
+    PMatrix->SetEntry(iL,5,NewPMatrix->GetEntryD(iL,5)); 
   }
 }
 /**********************************************************************/
 VBeam::~VBeam(){
   delete PMatrix; 
-} // Destructor is not made yet. 
+}
 /**********************************************************************/
 void VBeam::SetCxyz(double NewCxyz[3])
 { memcpy(Cxyz,NewCxyz,3*sizeof(double)); }
@@ -72,30 +70,33 @@ void VBeam::GetFields(const double X[3], cdouble EH[6])
     EH[j]=0.0; 
   
   int iL, L; 
-  double aIn,aL,bL; 
+  double aIn,ar,br,ai,bi; 
   cdouble M[3], N[3]; 
   for(iL=0; iL<numL; iL++) //for each row of PMatrix
     {
       L   =PMatrix->GetEntryD(iL,0);
       aIn =PMatrix->GetEntryD(iL,1);
-      aL  =PMatrix->GetEntryD(iL,2);
-      bL  =PMatrix->GetEntryD(iL,3);
-      //      printf("aL=%f,bL=%f\n",aL,bL);
-      if(aL==0.0&&bL==0.0){}///don't run GetMN if coeff.s are zero
+      ar  =PMatrix->GetEntryD(iL,2);
+      br  =PMatrix->GetEntryD(iL,3);
+      ai = PMatrix->GetEntryD(iL,4);
+      bi  =PMatrix->GetEntryD(iL,5);
+
+      //      printf("ar=%f,br=%f\n",ar,br);
+      if(ar==0.0&&br==0.0==ai==0.0&&bi==0.0){}///don't run GetMN if coeff.s are zero
       else{
         VBeam::GetMN(X,L,aIn,M,N);
-        EH[0]+=-(aL*M[0]);
-        EH[0]+=-(bL*N[0]);
-        EH[1]+=-(aL*M[1]);
-        EH[1]+=-(bL*N[1]);
-        EH[2]+=-(aL*M[2]);
-        EH[2]+=-(bL*N[2]);
-        EH[3]+=-(bL*M[0])/(II*Z);
-        EH[3]+=-(aL*N[0])/(II*Z);
-        EH[4]+=-(bL*M[1])/(II*Z);
-        EH[4]+=-(aL*N[1])/(II*Z);
-        EH[5]+=-(bL*M[2])/(II*Z);
-        EH[5]+=-(aL*N[2])/(II*Z);
+        EH[0]+=-((ar+II*ai)*M[0]);
+        EH[0]+=-((br+II*bi)*N[0]);
+        EH[1]+=-((ar+II*ai)*M[1]);
+        EH[1]+=-((br+II*bi)*N[1]);
+        EH[2]+=-((ar+II*ai)*M[2]);
+        EH[2]+=-((br+II*bi)*N[2]);
+        EH[3]+=-((br+II*bi)*M[0])/(II*Z);
+        EH[3]+=-((ar+II*ai)*N[0])/(II*Z);
+        EH[4]+=-((br+II*bi)*M[1])/(II*Z);
+        EH[4]+=-((ar+II*ai)*N[1])/(II*Z);
+        EH[5]+=-((br+II*bi)*M[2])/(II*Z);
+        EH[5]+=-((ar+II*ai)*N[2])/(II*Z);
       }
     }
  }//end GetField
@@ -104,7 +105,7 @@ void VBeam::GetFields(const double X[3], cdouble EH[6])
 /**********************************************************************/
 void VBeam::GetMN(const double X[3], int L, double aIn, cdouble M[3], cdouble N[3])
 {
-  ////////////////////////////////////////	
+  ////////////////////////////////////////      
   //Constants
   double k = std::real(sqrt(Eps*Mu)*Omega); //wavevector
   double kz = cos(aIn*M_PI/180.0)*k;
@@ -112,7 +113,7 @@ void VBeam::GetMN(const double X[3], int L, double aIn, cdouble M[3], cdouble N[
   double kpow2 = pow(k,2);
   double ktpow2 = pow(kt,2);
   double kzpow2 = pow(kz,2);
-  ////////////////////////////////////////	
+  ////////////////////////////////////////      
   //Coordinates (x,y,z) and (r, Phi, z)
   double XX[3];
   memcpy(XX, X, 3*sizeof(double));
@@ -127,7 +128,7 @@ void VBeam::GetMN(const double X[3], int L, double aIn, cdouble M[3], cdouble N[
     Phi=-M_PI*0.5; 
   else
     Phi=atan2(y,x);
-  ////////////////////////////////////////	
+  ////////////////////////////////////////      
   double LL = (double)L; 
   //Bessel Functions Simplified
   double BesP =   jn(L,kt*r);
@@ -143,7 +144,7 @@ void VBeam::GetMN(const double X[3], int L, double aIn, cdouble M[3], cdouble N[
   }
   /// Set M, N accordingly 
   if(r!=0.0){
-    ////////////////////////////////////////	
+    ////////////////////////////////////////    
     /// For Normal Cases 
     M[0]=exp(II*(LL*Phi + kz*z))*((BesPm1*kt*y)/r - (BesP*LL)/(II*x + y));
     M[1]=exp(II*(LL*Phi + kz*z))*(-((BesPm1*kt*x)/r) + (BesP*LL)/(x - II*y));
@@ -152,7 +153,7 @@ void VBeam::GetMN(const double X[3], int L, double aIn, cdouble M[3], cdouble N[
     N[1]=(exp(II*(LL*Phi + kz*z))*kz*(-((BesP*LL)/(x - II*y)) + (II*BesPm1*kt*y)/r))/k;
     N[2]=(BesP*exp(II*(LL*Phi + kz*z))*ktpow2)/k;
   }else if(r==0.0&&L==1){
-    ////////////////////////////////////////	
+    ////////////////////////////////////////    
     /// For L=1, r=0.0 
     M[0]=II*(0.5)*exp(II*kz*z)*kt;
     M[1]=-(exp(II*kz*z)*kt)/2.;
@@ -161,10 +162,10 @@ void VBeam::GetMN(const double X[3], int L, double aIn, cdouble M[3], cdouble N[
     N[1]=-(exp(II*kz*z)*kt*kz)/(2.*k);
     N[2]=0.0;
   }else if(r==0.0&&L==0){
-    ////////////////////////////////////////	
+    ////////////////////////////////////////    
     /// For L=0, r=0.0, only Nz is nonzero. 
     N[2]=(exp(II*kz*z)*ktpow2)/k;
   }//end else following if(r==0)
-  ////////////////////////////////////////	
+  ////////////////////////////////////////      
   /// For L>1, r=0.0, M=N=0. 
  }//end getMN

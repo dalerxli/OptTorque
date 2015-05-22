@@ -32,7 +32,7 @@ HR_LIBS = -lscuff
 
 LIBS = $(HR_LIBS) $(HDF5_LIBS) $(LB_LIBS)
 
-OT = OptTorque.o VBeam.o GHBeam.o OutputModules.o
+OT = OptTorque.o OptTorqueFunctions.o VBeam.o GHBeam.o OutputModules.o
 OptTorque: 	$(OT)
 		$(CXX) -Wall $(LDFLAGS) -o $@ $(OT) $(LIBS)
 
