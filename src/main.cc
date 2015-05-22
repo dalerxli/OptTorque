@@ -14,8 +14,14 @@
 #define II cdouble(0.0,1.0)
 #define MAXSTR 100 
 using namespace std;
+// strategy 
+// main function will be calling all other functions. 
+// objective function gets a vector of size n. 
+
+
 double objective(RWGGeometry *G, char *HDF5File, HMatrix *PARMMatrix, 
                  cdouble Omega);
+
 //---------------------------------------------------------------//
 double myfunc(unsigned n, const double *x, double *grad, void *my_func_data)
 {

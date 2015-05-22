@@ -79,67 +79,22 @@ int main(int argc, char *argv[])
   delete G, PARMMatrix, M, Q; 
 }
 /***************************************************************/
-/***************************************************************/
-/***************************************************************/
-double objective(RWGGeometry *G, HMatrix *PARMMatrix, HMatrix *M, HMatrix *Q)
+double objective(unsigned n, const double *x, double *grad, void *my_func_data) 
 {
-  printf("OBJECTIVE FUNCTION IS CALLED.\n"); 
-  /// Input:
-  ///    parameter matrix PARMMatrix 
-  ///    BEM matrix M, LU Factorized
-  ///    PFT matrix Q 
-  /// COMPUTE:
-  ///    RHS (sum aM+bN, GetRHSVector )
-  ///    KN=M\RHS (Surface current vector KN) 
-  /// 
+  cdouble Omega = 10.471975511965978; 
+  char *FileBase, *GeoFile, *HDF5File; 
+  strncpy(FileBase,sprintf("N3_400nm_Mesh60nm")); 
+  strncpy(GeoFile,sprintf("%s.scuffgeo",FileBase)); 
+  strncpy(HDF5File,sprintf("%s.HDF5",FileBase)); 
+  //I want the GeoFile and HDF5File to search for *.scuffgeo and *.HDF5 in the dir. 
 
-  //--------------------------------------------------------------------//
-  /// Simulate for single frequency                                  
-  //--------------------------------------------------------------------//
-  cdouble Omega= 10.471975511965978;
-  double wvnm= 2.0*M_PI*1000.0/std::real(Omega);
-
-  double FOM =0.0; ///will be the output. 
-  HVector *KN = G->AllocateRHSVector();     
-  HVector *RHS= G->AllocateRHSVector();     
-  //--------------------------------------------------------------------//
-  /// Assemble and compute RHS 
-  //--------------------------------------------------------------------//
-  VBeam *VBInit = 0; //new GHBeam(HM,HN); 
-  VBInit=new VBeam(PARMMatrix); 
-  printf("VBInit properties\n");  
-  printf("VBInit->numL=%d\n",VBInit->numL); 
-  ShowPARMMatirx(VBInit->numL, VBInit->PMatrix); 
-  /// set up the incident field profile and assemble the RHS vector 
-  //--------------------------------------------------------------------//
-  IncField *IF=0; /// Assemble IF from PARMMatrix
-  IF=VBInit; ///
-  printf("IF is constructed\n");  
-  // double *kbloch; 
-  // double kblochval = 0.0; 
-  // kbloch = &kblochval; 
-  G->AssembleRHSVector(Omega, IF, RHS); //KN and RHS are formed
-  KN->Copy(RHS); // this is the RHS vector assembled. 
-  M->LUSolve(KN);// solved KN. 
-
-  // Need Qmatrix and Cadj. this was already done in MatrixFOM old version. 
-  // you can use it again 
-  /*------------------------------------------------------------*/
-  /*------------------------------------------------------------*/
-  /*------------------------------------------------------------*/
-  PFTOptions *MyPFTOptions=InitPFTOptions();
-  HMatrix *QPFT[8]={0,0,0,0,0,0,0,0};
-  printf(" Getting PFT matrix Q...\n");
-  bool NeedMatrix[8]={false, false, false, false, false, false, false, false};
-
-  NeedMatrix[SCUFF_PABS]=true; //which matrices are needed. 
-  //NeedMatrix[SCUFF_PSCA]=true;
-  NeedMatrix[SCUFF_XFORCE]=true;
-  //NeedMatrix[SCUFF_ZFORCE]=true;
-  NeedMatrix[SCUFF_ZTORQUE]=true;
-
-  GetOPFTMatrices(G, 0, Omega, QPFT, NeedMatrix);
-  delete VBInit; 
+  RWGGeometry *G = new RWGGeometry(GeoFile);
+  
+  // function to compute FOM.  
+  double FOM; //=C^T Q C 
+  x[0] = ;
+  x[1] = ;
+  
+  
   return FOM; 
-}//end main 
-//--------------------------------------------------------------------//
+}//end objective 
