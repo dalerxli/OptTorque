@@ -1,11 +1,10 @@
-//-------------------------------------------------------------//
-//-------------------------------------------------------------//
-// elutil.cc 
-// file containing utility functions for OptTorque
-// using libraries in scuff-em 
-// 2015.05.22
-//-------------------------------------------------------------//
-//-------------------------------------------------------------//
+/*---------------------------------------------------------------
+ * OTutil.cc  
+ * file containing utility functions for OptTorque
+ * uses libraries in scuff-em 
+ * created on 2015.05.22
+ * last updated on 2015.05.22
+ *--------------------------------------------------------------*/
 #include <stdio.h>
 #include <math.h>
 #include <complex>
@@ -40,6 +39,7 @@ double GetAvgIntensity(RWGGeometry *G, int SurfaceIndex,
 //double **AllocateByEdgeArray(RWGGeometry *G, int ns);
 //void ProcessByEdgeArray(RWGGeometry *G, int ns, cdouble Omega,
 //                        double **ByEdge);
+void ShowPARMMatirx(HMatrix* PARMMatrix);
 //-------------------------------------------------------------//
 double GetIntegratedIntensity(RWGGeometry *G, int SurfaceIndex, 
                               HVector *RHSVector)
@@ -191,6 +191,25 @@ void ProcessByEdgeArray(RWGGeometry *G, int ns, cdouble Omega,
    };
  // free(ByEdge[0]);
  // free(ByEdge);
+}
+//-------------------------------------------------------------//
+//-------------------------------------------------------------//
+void ShowPARMMatirx(HMatrix* PARMMatrix)
+{
+  int L; 
+  double aIn, ar, br, ai, bi; 
+  printf("PARMMatrix: \n"); 
+  printf("L \t aIn \t\t ar \t\t br \t\t ai \t\t bi\n"); 
+  for(int iL=0; iL<PARMMatrix->NR; iL++) //for each row of PARMMatrix
+    {
+      L   =PARMMatrix->GetEntryD(iL,0);
+      aIn =PARMMatrix->GetEntryD(iL,1);
+      ar  =PARMMatrix->GetEntryD(iL,2);
+      br  =PARMMatrix->GetEntryD(iL,3);
+      ai  =PARMMatrix->GetEntryD(iL,4);
+      bi  =PARMMatrix->GetEntryD(iL,5);
+      printf("%d \t %f \t %f \t %f \t %f \t %f\n",L,aIn,ar,br,ai,bi);
+  }
 }
 //-------------------------------------------------------------//
 //-------------------------------------------------------------//
