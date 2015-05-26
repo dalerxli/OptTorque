@@ -48,7 +48,7 @@ GBT = GHBeamTest.o GHBeam.o
 GHBeamTest: 	$(GBT)
 		$(CXX) -Wall $(LDFLAGS) -o $@ $(GBT) $(LIBS)
 
-OBJ = objective.o VBeam.o GHBeam.o 
+OBJ = objective.o OTutils.o VBeam.o
 objective: 	$(OBJ)
 		$(CXX) -Wall $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
 

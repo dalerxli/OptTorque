@@ -17,11 +17,7 @@ using namespace std;
 // strategy 
 // main function will be calling all other functions. 
 // objective function gets a vector of size n. 
-
-
-double objective(RWGGeometry *G, char *HDF5File, HMatrix *PARMMatrix, 
-                 cdouble Omega);
-
+double objective(unsigned n, const double *x, double *grad) 
 //---------------------------------------------------------------//
 double myfunc(unsigned n, const double *x, double *grad, void *my_func_data)
 {
@@ -47,209 +43,52 @@ double myconstraint(unsigned n, const double *x, double *grad, void *data)
     }
     return ((a*x[0] + b) * (a*x[0] + b) * (a*x[0] + b) - x[1]);
  }
-
-
-double OTobj(unsigned n, const double *x, double *grad, void *my_func_data)
-{
-  //Owen comment on "const correctness"  for input. notforscuff
-
-  // double *x contains a ('5x5=30' by '1') vector, 
-  // alpha, ar, br, ai, bi 
-  // for each 5 elements in x, construct a RHS 
-  // calculate normalization intensity 
-
-
-    if (grad) {
-        grad[0] = 0.0;
-        grad[1] = 0.5 / sqrt(x[1]);
-    }
-    return FOM;
-}
-
 //---------------------------------------------------------------//
-int main(int argc, char *argv[]){
-  //nlopt_set_upper_bounds; 
-  my_constraint_data data[2] = {{},{}}; 
-  nlopt_add_inequality_constraint(opt, myconstraint, &data[0], 1e-8);
-  nlopt_add_inequality_constraint(opt, myconstraint, &data[1], 1e-8);
-  
+int main(int argc, char *argv[])
+  /// Objective 
+  /// 
+  /// READ In:
+  ///    parameter matrix PARMMatrix 
+  ///    BEM matrix A, LU Factorized
+  ///    PFT matrix Q 
+{
   /*--------------------------------------------------------------*/
   /*- process options  -------------------------------------------*/
   /*--------------------------------------------------------------*/
   /// Input arguments should be filenames. (pointers) 
-  cdouble OmegaVals[MAXFREQ];        int nOmegaVals;
   char *GeoFile=0; 
-  char *HDF5File=0; // file containing M, 
   char *PARMMatrixFile=0;
+  char *BEMMatrixFile=0;
+  char *PFTMatrixFile=0;
   char *LogLevel=0;
   /* name    type   #args  max_instances  storage  count  description*/
   OptStruct OSArray[]=
-   { 
-     {"geometry",   PA_STRING, 1, 1, (void *)&GeoFile,   0,  ".scuffgeo file"},
-     {"Omega",     PA_CDOUBLE, 1, MAXFREQ, (void *)OmegaVals, &nOmegaVals,  "(angular) frequency"},
-     {"PARMMatrix", PA_STRING, 1, 1, (void *)&PARMMatrixFile, 0, "VParameters file"},
-     {"HDF5File",   PA_STRING, 1, 1, (void *)&HDF5File,  0, "name of HDF5 file for Matrix Data"},
-     {"LogLevel",   PA_STRING, 1, 1, (void *)&LogLevel,  0, "none | terse | verbose | verbose2"},
-     //
-     {0,0,0,0,0,0,0}
-   };
+    { 
+      {"geometry",   PA_STRING,  1, 1, (void *)&GeoFile, 0,  ".scuffgeo file"},
+      {"PARMMatrix", PA_STRING,  1, 1, (void *)&PARMMatrixFile, 0, "VParameters file"},
+      {"BEMMatrix",  PA_STRING,  1, 1, (void *)&BEMMatrixFile, 0,  "BEM Matrix datafile"},
+      {"PFTMatrix",  PA_STRING,  1, 1, (void *)&PFTMatrixFile, 0,  "PFT Matrix datafile"},
+      {"LogLevel",   PA_STRING,  1, 1, (void *)&LogLevel, 0, "none | terse | verbose | verbose2"},
+      {0,0,0,0,0,0,0}
+    };
   ProcessOptions(argc, argv, OSArray);
-  if (GeoFile==0)
-    OSUsage(argv[0],OSArray,"--geometry option is mandatory");
-  if (PARMMatrixFile==0)
-    OSUsage(argv[0],OSArray,"--PARMMatrix option is mandatory");
-  if (HDF5File==0)
-    OSUsage(argv[0],OSArray,"--HDF5File option is mandatory");
-
+  // if (GeoFile==0)
+  //   OSUsage(argv[0],OSArray,"--geometry option is mandatory");
+  // if (PARMMatrixFile==0)
+  //   OSUsage(argv[0],OSArray,"--PARMMatrix option is mandatory");
+  // if (BEMMatrixFile==0)
+  //  OSUsage(argv[0],OSArray,"--BEMMatrix option is mandatory");
   RWGGeometry *G = new RWGGeometry(GeoFile);
   HMatrix *PARMMatrix = new HMatrix(PARMMatrixFile, LHM_TEXT);
   ShowPARMMatirx(PARMMatrix); 
-
-  HVector *OmegaList=0;
-  if (nOmegaVals==1) // process -- Omega options if present
-    {
-      OmegaList=new HVector(nOmegaVals, LHM_COMPLEX);
-      for(int n=0; n<nOmegaVals; n++)
-        OmegaList->SetEntry(n,OmegaVals[n]);
-      // but currently only use 1 omega value 
-    }
-  else 
-    OSUsage(argv[0], OSArray, "you must specify at least one frequency");
-
-  cdouble Omega; 
-  for(int nFreq=0; nFreq<OmegaList->N; nFreq++)
-    { 
-      Omega = OmegaList->GetEntry(nFreq); 
-      objective(G, HDF5File, PARMMatrix, Omega); 
-    }
-
-  delete PARMMatrix; 
-}
-/***************************************************************/
-double* OTgetx(HMatrix *P)
-// function OTgetx creates a x vector. 
-{
-  int NR = PARMMatrix->NR; 
-  int n = NR*5; 
-  double x[n]=0; 
-  for (int j=0;j<NR;j++)
-    {
-      x[j*5]  =P->GetEntry(j,1);   //aIn 
-      x[j*5+1]=P->GetEntry(j,2); //ar
-      x[j*5+2]=P->GetEntry(j,3); //br
-      x[j*5+3]=P->GetEntry(j,4); //ai
-      x[j*5+4]=P->GetEntry(j,5); //bi
-    } 
-  return x; 
-}
-HMatrix* OTgetP(double *x)
-// function OTgetx creates a x vector. 
-{
-  int NR = PARMMatrix->NR; 
-  int n = NR*5; 
-  double x[n]=0; 
-  for (int j=0;j<NR;j++)
-    {
-      x[j*5]  =P->GetEntry(j,1);   //aIn 
-      x[j*5+1]=P->GetEntry(j,2); //ar
-      x[j*5+2]=P->GetEntry(j,3); //br
-      x[j*5+3]=P->GetEntry(j,4); //ai
-      x[j*5+4]=P->GetEntry(j,5); //bi
-    } 
-  return P; 
-}
-
-
-
-
-  double objective(RWGGeometry *G, char *HDF5File, HMatrix *PARMMatrix, cdouble Omega)
-{
+  HMatrix *M = new HMatrix(BEMMatrixFile, LHM_TEXT);
+  //A->LUFactorize(); //(already done)
+  HMatrix *Q = new HMatrix(PFTMatrixFile, LHM_TEXT);
+  objective(G, PARMMatrix, M, Q); 
   
-  cdouble dFOM =0.0; ///will be the output. 
-
-  char OmegaStr[MAXSTR];
-  char WvnmStr[MAXSTR]; 
-  double wvnm; 
-  z2s(Omega,OmegaStr); // set frequency. 
-  wvnm = 2.0*M_PI*1000.0/real(Omega); 
-  snprintf(WvnmStr,MAXSTR,"%i",int(wvnm)); 
-  Log("Working at frequency %s...",OmegaStr);
-
-  // import matrices. 
-  //void *HDF5Context=0;
-  //HDF5Context=HMatrix::OpenHDF5Context(HDF5File);
-  //Log("Opened HDF5Context ...");
-  //HMatrix *M = new HMatrix(HDF5File,LHM_HDF5,"M"); 
-  //if (M->ErrMsg) ErrExit(M->ErrMsg);
-  HMatrix *MLU = new HMatrix(HDF5File, LHM_HDF5, "MLU");
-  if (MLU->ErrMsg) ErrExit(MLU->ErrMsg);
-  int NR = MLU->NR; // number of rows 
-  printf("NR = %i\n",NR); 
-  HMatrix *QabsOPFT = new HMatrix(HDF5File, LHM_HDF5,"QabsOPFT");
-  if (QabsOPFT->ErrMsg) ErrExit(QabsOPFT->ErrMsg);
-  HMatrix *QFZOPFT = new HMatrix(HDF5File, LHM_HDF5, "QFZOPFT");
-  if (QFZOPFT->ErrMsg) ErrExit(QFZOPFT->ErrMsg);
-  HMatrix *QTZOPFT = new HMatrix(HDF5File, LHM_HDF5, "QTZOPFT");
-  if (QTZOPFT->ErrMsg) ErrExit(QTZOPFT->ErrMsg);
-
-  printf("size of QabsOPFT is : %i by %i\n",QabsOPFT->NR,QabsOPFT->NC);   
-
-  // HVector *RHS  = new HVector(HDF5File, LHM_HDF5, "RHS");
-  // if (RHS->ErrMsg) ErrExit(RHS->ErrMsg); 
-  // HVector *KN   = new HVector(HDF5File, LHM_HDF5, "KN");
-  // if (KN->ErrMsg)  ErrExit(KN->ErrMsg);
-  Log(" Successfully imported all matrices...\n");
-
-  // from PARMMatrix, create IF and assemble RHS
-
-  char GeoFileBase[MAXSTR];
-  strncpy(GeoFileBase,GetFileBase(G->GeoFileName),MAXSTR);  
-
-
-  // Where should the normalizing step be ?? 
-  Log("  Assembling the RHS vector...");
-  IncField *IF=new VBeam(PARMMatrix);
-  HVector* RHS=new HVector(NR,LHM_COMPLEX); 
-  HVector* KN=new HVector(NR,LHM_COMPLEX); 
-  RHS=G->AllocateRHSVector();
-  G->AssembleRHSVector(Omega, IF, RHS); //KN and RHS are formed
-  double Intensity= GetIntegratedIntensity(G, 0, RHS);
-  KN->Copy(RHS);
-  printf("size of RHS is : %i \n",RHS->N);   
-  MLU->LUFactorize(); 
-  MLU->LUSolve(KN);// solved KN. 
-  HMatrix* RHSMAT = new HMatrix(NR,1,RHS->RealComplex, LHM_NORMAL, RHS->ZV); 
-  printf("size of RHSMAT is : %i by %i\n", RHSMAT->NR, RHSMAT->NC);   
-  
-  // M*C_adj = transpose(QPFT)*conj(C)  
-  printf("KN[1] = %e+%ei \n",real(KN->GetEntry(1)),imag(KN->GetEntry(1)));
-
-  //this is not functioning.    !!
-  HMatrix* KNMAT = new HMatrix(NR,1,KN->RealComplex, LHM_NORMAL, KN->ZV); 
-  printf("KNMAT[1,1] = %e+%ei \n",real(KNMAT->GetEntry(1,1)),imag(KNMAT->GetEntry(1,1)));   
-
-  KNMAT->Adjoint();
-  KNMAT->Transpose(); //KNMAT = conj(KN); 
-
-  HMatrix* Cadj = new HMatrix(NR,1,LHM_COMPLEX); 
-  printf("size of KNMAT is : %i x %i \n",KNMAT->NR,KNMAT->NC);   
-  printf("size of Cadj is : %i x %i \n",Cadj->NR,Cadj->NC);   
-  QabsOPFT->Multiply(KNMAT,Cadj,"--transA C"); 
-  printf("Cadj[1,1] = %e+%ei \n",real(Cadj->GetEntry(1,1)),imag(Cadj->GetEntry(1,1)));   
-
-  MLU->LUSolve(Cadj);   //  printf(" Computed Cadj...\n");
-
-  char MatFileName[100];
-  snprintf(MatFileName, 100, "Mat_Cadj.dat");  
-  Cadj->ExportToText(MatFileName,"--separate,"); 
-
-  HMatrix* dFOMMAT = new HMatrix(1,1,LHM_COMPLEX);  
-
-  //FOM
-  Cadj->Transpose();
-  Cadj->Multiply(RHSMAT,dFOMMAT);
-  dFOM = dFOMMAT->GetEntry(1,1); 
-
-  printf("dFOM = %e+%ei\n",real(dFOM),imag(dFOM));
-  return dFOM; 
-}//end objective 
+  delete G, PARMMatrix, M, Q; 
+}
+ //  nlopt_set_upper_bounds; 
+ //  my_constraint_data data[2] = {{},{}}; 
+ //  nlopt_add_inequality_constraint(opt, myconstraint, &data[0], 1e-8);
+ //  nlopt_add_inequality_constraint(opt, myconstraint, &data[1], 1e-8);
