@@ -23,6 +23,19 @@ VBeam::VBeam(int NewL, double NewaIn)
   numL= 1; 
  } 
 /**********************************************************************/
+VBeam::VBeam(int NewL, double NewaIn, double Newar, double Newbr, 
+             double Newai, double Newbi) 
+// VBeam initialization for a single mode with all coefficients specified
+{ 
+  PMatrix->SetEntry(0,0,NewL);    //L
+  PMatrix->SetEntry(0,1,NewaIn);  //aIn
+  PMatrix->SetEntry(0,2,Newar);     //real aL[L]
+  PMatrix->SetEntry(0,3,Newbr);     //real bL[L]
+  PMatrix->SetEntry(0,4,Newai);     //imag aL[L]
+  PMatrix->SetEntry(0,5,Newbi);     //imag bL[L]
+  numL= 1; 
+ } 
+/**********************************************************************/
 VBeam::VBeam(HMatrix *NewPMatrix) 
 {
   if ( NewPMatrix->NC!=6 )

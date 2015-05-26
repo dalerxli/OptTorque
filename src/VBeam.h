@@ -24,6 +24,9 @@ class VBeam: public IncField
    double Cxyz[3];    // beam center position [um]
    double nHat[3];    // propagation direction
    VBeam(int NewL, double NewaIn);
+   VBeam(int NewL, double NewaIn, double Newar, double Newbr, 
+         double Newai, double Newbi);
+
    VBeam(HMatrix *NewPMatrix);
    ~VBeam();
    void SetCxyz(double NewCxyz[3]);
