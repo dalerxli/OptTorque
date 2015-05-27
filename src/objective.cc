@@ -113,7 +113,9 @@ double objective(unsigned n, double *x, double *grad)
   HMatrix* C    = new HMatrix(NR,1,KN->RealComplex, LHM_NORMAL, KN->ZV); 
   // --- choose Q 
   HMatrix* Q = new HMatrix(NR,NR,LHM_COMPLEX);
-  Q->Copy(QTZOPFT); // Choose as torque matrix 
+  //  Q->Copy(QTZOPFT); // Choose as torque matrix 
+  Q->Copy(QabsOPtorque matrix 
+  Q->Copy(QabsOPFT); // Choose as torque matrix 
 
   // --- compute FOM = Cconj*Q*C , where C=KN and Q=QTZOPFT
   HMatrix* Cconj = new HMatrix(NR,1,LHM_COMPLEX); 
