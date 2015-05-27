@@ -39,10 +39,10 @@ VBeam::VBeam(int NewL, double NewaIn, double Newar, double Newbr,
 VBeam::VBeam(HMatrix *NewPMatrix) 
 {
   if ( NewPMatrix->NC!=6 )
-    ErrExit("%s:%i: NewPMatrix should have 4 columns.");
+    ErrExit("%s:%i: NewPMatrix should have 6 columns.");
 
-  if ( NewPMatrix->NR>25 )
-    ErrExit("%s:%i: NewPMatrix has too many rows >25.");
+  if ( NewPMatrix->NR>30)
+    ErrExit("%s:%i: NewPMatrix has too many rows >30.");
 
   numL=NewPMatrix->NR; 
   int iL; 
