@@ -3,7 +3,7 @@
  * compute Torque FOM
  * for a given BEM matrix, OPFT matrix, frequency, and PARMMatrix
  * created 2015.03
- * last updated on 2015.05.22
+ * last updated on 2015.05.27
  *--------------------------------------------------------------*/
 #include <stdio.h>
 #include <math.h>
