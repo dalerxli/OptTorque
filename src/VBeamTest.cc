@@ -1,6 +1,7 @@
 /*
  * VBeamTest.cc   -- Tests VBeam Result for a given X[3] and Omega 
- * v16. HMatrix input is read from file just like in VBeam. 
+ * Yoonkyung Eunnie Lee 
+ * last updated on 2015.05.27
  */
 #include <stdio.h>
 #include <iostream>
@@ -43,5 +44,9 @@ int main(){
            sqrt(pow(std::abs(EH[0]),2)+pow(std::abs(EH[1]),2)+pow(std::abs(EH[2]),2)),
            sqrt(pow(std::abs(EH[3]),2)+pow(std::abs(EH[4]),2)+pow(std::abs(EH[5]),2))
            ); 
+
+  delete PARMMatrix; 
+  delete VB;   
+
   return 0;
 }
