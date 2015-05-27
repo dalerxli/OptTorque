@@ -17,13 +17,12 @@
 //#include "OptTorque.h" 
 
 #define II cdouble(0.0,1.0)
-#define NUML 3
+#define NUML 5
 #define MAXSTR 100 
 using namespace scuff;
 //---------------------------------------------------------------//
 double GetIntegratedIntensity(RWGGeometry *G, int SurfaceIndex, 
                               HVector *RHSVector);
-
 void ShowPARMMatrix(HMatrix* PARMMatrix); 
 double objective(unsigned n, double *x, double *grad);
 //---------------------------------------------------------------//
@@ -31,8 +30,7 @@ int main()
 {
   // create a vector x to test. 
   double x[NUML*5]; 
-  double grad[2]; 
-
+  double grad[NUML*5]; 
   for (int l = 0; l<NUML; l++)
     {
       x[l*5] = 10.0;  //alpha 
@@ -42,19 +40,22 @@ int main()
       x[l*5+4] = 0.0; //bi
     }
   objective(NUML*5, x, grad); 
+
+      // char MatFileName[100];
+      // snprintf(MatFileName, 100, "Mat_Cadj.dat");  
+      // Cadj->ExportToText(MatFileName,"--separate,"); 
+
 }
 //---------------------------------------------------------------//
-
 double objective(unsigned n, double *x, double *grad) 
 {
-  //---------------------------------------------------------------//
   cdouble Omega = 10.471975511965978; 
   //---------------------------------------------------------------//
   char FileBase[MAXSTR], GeoFile[MAXSTR], HDF5File[MAXSTR];
   snprintf(FileBase,MAXSTR,"N3_400nm_Mesh60nm"); 
   snprintf(GeoFile,MAXSTR,"%s.scuffgeo",FileBase);  
   snprintf(HDF5File,MAXSTR,"%s.HDF5",FileBase ); 
-  //I want the GeoFile and HDF5File to search for *.scuffgeo and *.HDF5 in the dir. 
+  // I want the GeoFile and HDF5File to search for *.scuffgeo and *.HDF5 in the dir. 
   RWGGeometry *G = new RWGGeometry(GeoFile);
   Log(" Created RWGGeometry G...\n");
   //---------------------------------------------------------------//
@@ -76,7 +77,7 @@ double objective(unsigned n, double *x, double *grad)
   HVector* KN1=new HVector(NR,LHM_COMPLEX); 
   HMatrix* PMatrix=new HMatrix(NUML,6,LHM_REAL); 
   double cnorm[NUML]; 
-  //KN1=G->AllocateRHSVector();
+  // KN1=G->AllocateRHSVector();
   for (int l; l<NUML; l++){
     // for each l, compute cnorm[l]
     // IncField *IF1 = new VBeam(l,x[l*5],x[l*5+1],x[l*5+2],x[l*5+3],x[l*5+4]); 
@@ -94,54 +95,66 @@ double objective(unsigned n, double *x, double *grad)
     PMatrix->SetEntry(l,5,x[l*5+4]/cnorm[l]); 
     delete IF1; 
   }
-  //ShowPARMMatrix(PMatrix); 
+  //ShowPARMMatrix(PMatrix);
+
+  // --- allocate necessary vectors and matrices
   HVector* KN=new HVector(NR,LHM_COMPLEX); 
   HVector* RHS=new HVector(NR,LHM_COMPLEX); 
+
+  HMatrix* TEMPMAT = new HMatrix(NR,1,LHM_COMPLEX); 
+  HMatrix* FOM = new HMatrix(1,1,LHM_COMPLEX); 
+  // --- create IncField from the normalized PMatrix 
   IncField* IF=new VBeam(PMatrix);
+  // --- compute RHS, Solve for C=KN
   G->AssembleRHSVector(Omega, IF, KN); 
   RHS->Copy(KN);
-  // printf("size of RHS is : %i \n",RHS->N);
   MLU->LUFactorize(); 
   MLU->LUSolve(KN);// solved KN. 
-  HMatrix* KNMAT = new HMatrix(NR,1,KN->RealComplex, LHM_NORMAL, KN->ZV); 
-  printf("KNMAT[0,0] = %e+%ei \n",real(KNMAT->GetEntry(0,0)),imag(KNMAT->GetEntry(0,0)));   
-  
-  HMatrix* TempN = new HMatrix(NR,1,LHM_COMPLEX); 
-  HMatrix* Temp1 = new HMatrix(1, 1,LHM_COMPLEX); 
-  QTZOPFT->Multiply(KNMAT,TempN);
+  HMatrix* C    = new HMatrix(NR,1,KN->RealComplex, LHM_NORMAL, KN->ZV); 
+  // --- choose Q 
+  HMatrix* Q = new HMatrix(NR,NR,LHM_COMPLEX);
+  Q->Copy(QTZOPFT); // Choose as torque matrix 
 
-  KNMAT->Multiply(TempN,Temp1,"--transA C"); //Temp1 = Adj(KN)*Q*KN
-  printf("FOM = %e+%ei \n",real(Temp1->GetEntry(0,0)),imag(Temp1->GetEntry(0,0)));
-  double FOM = Temp1->GetEntryD(0,0); 
-  delete TempN, Temp1; 
+  // --- compute FOM = Cconj*Q*C , where C=KN and Q=QTZOPFT
+  HMatrix* Cconj = new HMatrix(NR,1,LHM_COMPLEX); 
+  Cconj->Copy(C); 
+  Cconj->Adjoint(); // row vector for Adjoint(C)
+  Q->Multiply(C,TEMPMAT); // TEMPMAT= Q*C
+  Cconj->Multiply(TEMPMAT,FOM); // FOM= Cconj^T*Q*C 
+  printf("Computed FOM = (%e)+(%e)i.\n",
+         real(FOM->GetEntry(0,0)),imag(FOM->GetEntry(0,0)));
+  // --- if gradient value is required, use adjoint method 
+  // --- M*Cadj = transpose(QPFT)*conj(C)  
   if(grad)
-    { // M*C_adj = transpose(QPFT)*conj(C)  
-      HMatrix* RHSMAT = new HMatrix(NR,1,RHS->RealComplex, LHM_NORMAL, RHS->ZV); 
-      // printf("KN[0] = %e+%ei \n",real(KN->GetEntry(1)),imag(KN->GetEntry(1)));
-      KNMAT->Adjoint();
-      KNMAT->Transpose(); // KNMAT = conj(KN); 
-     
-      HMatrix* Cadj = new HMatrix(NR,1,LHM_COMPLEX); 
-      printf("size of KNMAT is : %i x %i \n",KNMAT->NR,KNMAT->NC);   
-      printf("size of Cadj is : %i x %i \n",Cadj->NR,Cadj->NC);   
-      QabsOPFT->Multiply(KNMAT,Cadj,"--transA C"); 
-      printf("Cadj[0,0] = %e+%ei \n",real(Cadj->GetEntry(0,0)),imag(Cadj->GetEntry(0,0)));   
-      
-      MLU->LUSolve(Cadj); 
-      Log(" Computed Cadj...\n");
-      char MatFileName[100];
-      snprintf(MatFileName, 100, "Mat_Cadj.dat");  
-      Cadj->ExportToText(MatFileName,"--separate,"); 
+    { 
+      // --- to compute the gradient, we need F_lm which is RHS for a single coeff
 
-      HMatrix* dFOMMAT = new HMatrix(1,1,LHM_COMPLEX);  
-      //dFOM is grad. grad[0] and grad[1] are different things. 
-      Cadj->Multiply(RHSMAT,dFOMMAT,"transA"); 
-      grad[0] = 0.0; 
-      grad[1] = dFOMMAT->GetEntryD(0,0); //This is not right . real and imag
-      printf("grad[1] = %e+%ei\n",std::real(grad[1]),std::imag(grad[1]));
- 
-      delete RHSMAT, Cadj, dFOMMAT; 
+      // --- compute adjoint current Cadj
+      HMatrix* Cadj = new HMatrix(NR,1,LHM_COMPLEX);// adjoint current
+      Cconj->Transpose();                           // column vector for Conj(C)
+      Q->Multiply(Cconj,Cadj,"--transA T");           // Cadj = transpose(Q)*conj(C)
+      MLU->LUSolve(Cadj);                           // Cadj = M\(transpose(Q)*conj(C))
+      printf("Computed Cadj[0,0] = %e+%ei \n",
+             real(Cadj->GetEntry(0,0)),imag(Cadj->GetEntry(0,0)));   
+
+      // --- the gradient does not exist for angle aIn. 
+      for(int l = 0; l<NUML; l++){
+        grad[l*5]=0.0; 
+      }
+      // --- the gradient exists for ar,br,ai,bi for a fixed aIn and L. 
+      for(int l = 0; l<NUML; l++){
+        //individual RHS is needed
+        HMatrix* RHSMAT = new HMatrix(NR,1,RHS->RealComplex, LHM_NORMAL, RHS->ZV); 
+        HMatrix* dFOM = new HMatrix(1,1,LHM_COMPLEX);  // gradient of FOM
+        Cadj->Multiply(RHSMAT,dFOM,"--transA T"); // compute dFOM 
+        grad[l*5+1]=dFOM->GetEntryD(0,0); // ar
+        grad[l*5+2]=0.0; // br
+        grad[l*5+3]=0.0; // ai
+        grad[l*5+4]=0.0; // bi
+        delete RHSMAT, dFOM; 
+      }    
+      delete Cadj; 
     }
-  delete KNMAT; 
-  return FOM; 
+  delete KN1, PMatrix, KN, RHS, TEMPMAT, FOM, IF, C, Q, Cconj; 
+  return FOM->GetEntryD(0,0); 
 }//end objective 
