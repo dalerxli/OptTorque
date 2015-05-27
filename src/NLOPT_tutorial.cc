@@ -1,6 +1,5 @@
 /*---------------------------------------------------------------
- * main.cc  
- * contains examples of NLOPT in C 
+ * main.cc : NLOPT example in C 
  * created 2015.05.21
  * last updated on 2015.05.27
  *--------------------------------------------------------------*/
@@ -8,8 +7,6 @@
 #include <math.h>
 #include <nlopt.h>
 #include <complex>
-#include <fstream>
-#include <iostream>
 #include <cstdlib>
 #define II cdouble(0.0,1.0)
 #define MAXSTR 100 
@@ -42,10 +39,28 @@ double myconstraint(unsigned n, const double *x, double *grad, void *data)
 //---------------------------------------------------------------//
 int main(int argc, char *argv[])
 {
+  double lb[2] = { -HUGE_VAL, 0 }; /* lower bounds */
 
- //  nlopt_set_upper_bounds; 
- //  my_constraint_data data[2] = {{},{}}; 
- //  nlopt_add_inequality_constraint(opt, myconstraint, &data[0], 1e-8);
- //  nlopt_add_inequality_constraint(opt, myconstraint, &data[1], 1e-8);
+  nlopt_opt opt;
+  opt = nlopt_create(NLOPT_LD_MMA, 2); /* algorithm and dimensionality */
 
-}
+  nlopt_set_lower_bounds(opt, lb);
+  nlopt_set_min_objective(opt, myfunc, NULL);
+
+  my_constraint_data data[2] = { {2,0}, {-1,1} };
+
+  nlopt_add_inequality_constraint(opt, myconstraint, &data[0], 1e-8);
+  nlopt_add_inequality_constraint(opt, myconstraint, &data[1], 1e-8);
+  nlopt_set_xtol_rel(opt, 1e-4);
+
+  double x[2] = { 1.234, 5.678 };  /* some initial guess */
+  double minf; /* the minimum objective value, upon return */
+
+  if (nlopt_optimize(opt, x, &minf) < 0) {
+    printf("nlopt failed!\n");
+  }
+  else {
+    printf("found minimum at f(%g,%g) = %0.10g\n", x[0], x[1], minf);
+  }
+  nlopt_destroy(opt);
+}//end main 

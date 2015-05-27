@@ -2,34 +2,45 @@
  * objective.cc  
  * compute Torque FOM
  * for a given BEM matrix, OPFT matrix, frequency, and PARMMatrix
- * created 2015.03
+ * Yoonkyung Eunnie Lee 
+ * created on 2015.03.18
  * last updated on 2015.05.27
  *--------------------------------------------------------------*/
+// each objective file should receive *OT_data
+
+typedef struct {
+  char FileBase[]; 
+  cdouble Omega; 
+} OT_data; 
+
+has a fixed geometry and frequency. 
+
 #include <stdio.h>
 #include <math.h>
 #include <complex>
-#include <fstream>
-#include <iostream>
 #include <cstdlib>
 #include <libhrutil.h>
 #include <libscuff.h>
 #include "VBeam.h" 
-//#include "OptTorque.h" 
 
 #define II cdouble(0.0,1.0)
 #define NUML 5
 #define MAXSTR 100 
+#define FileBase "N3_400nm_Mesh60nm" 
+#define Omega cdouble(10.471975511965978,0.0)
+
 using namespace scuff;
+
 //---------------------------------------------------------------//
 double GetIntegratedIntensity(RWGGeometry *G, int SurfaceIndex, 
                               HVector *RHSVector);
 void ShowPARMMatrix(HMatrix* PARMMatrix); 
-double objective_Qabs(unsigned n, double *x, double *grad);
-double objective_QTZ(unsigned n, double *x, double *grad) ;
-double objective_QFZ(unsigned n, double *x, double *grad) ;
-
+double objective_Qabs(unsigned n, double *x, double *grad, void *OT_data);
+double objective_QTZ(unsigned n, double *x, double *grad, void *OT_data);
+double objective_QFZ(unsigned n, double *x, double *grad, void *OT_data);
 //---------------------------------------------------------------//
 int main()
+// main function to test objective_Q
 {
   // create a vector x to test. 
   double x[NUML*5]; 
@@ -45,19 +56,32 @@ int main()
 
   objective_QFZ(NUML*5, x, grad); 
 
+  for (int l = 0; l<NUML; l++)
+    {
+      x[l*5] = 10.0;  //alpha 
+      x[l*5+1] = 1.1; //ar
+      x[l*5+2] = 0.0; //br
+      x[l*5+3] = 0.0; //ai
+      x[l*5+4] = 0.0; //bi
+    }
+
+  objective_QFZ(NUML*5, x, grad); 
+
       // char MatFileName[100];
       // snprintf(MatFileName, 100, "Mat_Cadj.dat");  
       // Cadj->ExportToText(MatFileName,"--separate,"); 
 
 }
-
 //---------------------------------------------------------------//
+
 double objective_Qabs(unsigned n, double *x, double *grad) 
+// objective function for power absorption 
 {
-  cdouble Omega = 10.471975511965978; 
+  // cdouble Omega = 10.471975511965978; 
   //---------------------------------------------------------------//
-  char FileBase[MAXSTR], GeoFile[MAXSTR], HDF5File[MAXSTR];
-  snprintf(FileBase,MAXSTR,"N3_400nm_Mesh60nm"); 
+  // char FileBase[MAXSTR]; 
+  char GeoFile[MAXSTR], HDF5File[MAXSTR];
+  //snprintf(FileBase,MAXSTR,"N3_400nm_Mesh60nm"); 
   snprintf(GeoFile,MAXSTR,"%s.scuffgeo",FileBase);  
   snprintf(HDF5File,MAXSTR,"%s.HDF5",FileBase ); 
   // I want the GeoFile and HDF5File to search for *.scuffgeo and *.HDF5 in the dir. 
@@ -101,7 +125,6 @@ double objective_Qabs(unsigned n, double *x, double *grad)
     PMatrix->SetEntry(l,5,x[l*5+4]/cnorm[l]); 
     delete IF1; 
   }
-  //ShowPARMMatrix(PMatrix);
 
   // --- allocate necessary vectors and matrices
   HVector* KN=new HVector(NR,LHM_COMPLEX); 
@@ -169,10 +192,11 @@ double objective_Qabs(unsigned n, double *x, double *grad)
 //---------------------------------------------------------------//
 double objective_QTZ(unsigned n, double *x, double *grad) 
 {
-  cdouble Omega = 10.471975511965978; 
+  // cdouble Omega = 10.471975511965978; 
   //---------------------------------------------------------------//
-  char FileBase[MAXSTR], GeoFile[MAXSTR], HDF5File[MAXSTR];
-  snprintf(FileBase,MAXSTR,"N3_400nm_Mesh60nm"); 
+  // char FileBase[MAXSTR]; 
+  char GeoFile[MAXSTR], HDF5File[MAXSTR];
+  //snprintf(FileBase,MAXSTR,"N3_400nm_Mesh60nm"); 
   snprintf(GeoFile,MAXSTR,"%s.scuffgeo",FileBase);  
   snprintf(HDF5File,MAXSTR,"%s.HDF5",FileBase ); 
   // I want the GeoFile and HDF5File to search for *.scuffgeo and *.HDF5 in the dir. 
@@ -256,10 +280,11 @@ double objective_QTZ(unsigned n, double *x, double *grad)
 //---------------------------------------------------------------//
 double objective_QFZ(unsigned n, double *x, double *grad) 
 {
-  cdouble Omega = 10.471975511965978; 
+  // cdouble Omega = 10.471975511965978; 
   //---------------------------------------------------------------//
-  char FileBase[MAXSTR], GeoFile[MAXSTR], HDF5File[MAXSTR];
-  snprintf(FileBase,MAXSTR,"N3_400nm_Mesh60nm"); 
+  // char FileBase[MAXSTR]; 
+  char GeoFile[MAXSTR], HDF5File[MAXSTR];
+  //snprintf(FileBase,MAXSTR,"N3_400nm_Mesh60nm"); 
   snprintf(GeoFile,MAXSTR,"%s.scuffgeo",FileBase);  
   snprintf(HDF5File,MAXSTR,"%s.HDF5",FileBase ); 
   // I want the GeoFile and HDF5File to search for *.scuffgeo and *.HDF5 in the dir. 
