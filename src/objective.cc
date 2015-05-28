@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
       x[l*5+1] = 1.0; //ar
       x[l*5+2] = 0.0; //br
       x[l*5+3] = 0.0; //ai
-      x[l*5+4] = 0.0; //bi
+      x[l*5+4] = 1.0; //bi
     }
 
   objective_QFZ(n, x, grad); 
@@ -51,10 +51,10 @@ int main(int argc, char *argv[])
   for (int l = 0; l<NUML; l++)
     {
       x[l*5] = 10.0;  //alpha 
-      x[l*5+1] = 1.1; //ar
+      x[l*5+1] = 1.01; //ar
       x[l*5+2] = 0.0; //br
       x[l*5+3] = 0.0; //ai
-      x[l*5+4] = 0.0; //bi
+      x[l*5+4] = 1.0; //bi
     }
   objective_QFZ(n, x, grad); 
 

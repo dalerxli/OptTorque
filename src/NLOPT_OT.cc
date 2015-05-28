@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
   data->Omega=cdouble(10.471975511965978,0.0); 
   snprintf(data->FileBase,MAXSTR,"N3_400nm_Mesh60nm"); 
   snprintf(data->QName,MAXSTR,"QTZOPFT"); 
+
   //---------------------------------------------------------------//
   // --- create optimization object 
   nlopt_opt opt;
@@ -57,14 +58,14 @@ int main(int argc, char *argv[])
   }
   nlopt_set_lower_bounds(opt, lb);  // set lower bounds 
   nlopt_set_upper_bounds(opt, ub); 
+  nlopt_set_min_objective(opt, objective, data);
+
   //---------------------------------------------------------------//
   // --- perform optimization 
-  nlopt_set_min_objective(opt, objective, NULL);
   nlopt_set_xtol_rel(opt, 1e-4);
 
   double x[n]; // set it equal to some initial guess. 
   double grad[n]; 
-
   double FOM; /* the minimum objective value, upon return */
   for (int l = 0; l<NUML; l++)
     {
@@ -79,7 +80,7 @@ int main(int argc, char *argv[])
     printf("nlopt failed!\n");
   }
   else {
-    printf("found minimum at f(%g,%g) = %0.10g\n", x[0], x[1], FOM);
+    printf("found minimum at f(x) = %0.10g\n", FOM);
   }
   nlopt_destroy(opt);
 }//end main 
@@ -146,16 +147,15 @@ double objective(unsigned n, double *x, double *grad, void *data)
   MLU->LUFactorize(); 
   MLU->LUSolve(KN);// solved KN. 
   HMatrix* C    = new HMatrix(NR,1,KN->RealComplex, LHM_NORMAL, KN->ZV); 
-  // --- choose Q 
-
   // --- compute FOM = Cconj*Q*C , where C=KN and Q=QTZOPFT
   HMatrix* Cconj = new HMatrix(NR,1,LHM_COMPLEX); 
   Cconj->Copy(C); 
   Cconj->Adjoint(); // row vector for Adjoint(C)
   Q->Multiply(C,TEMPMAT); // TEMPMAT= Q*C
   Cconj->Multiply(TEMPMAT,FOM); // FOM= Cconj^T*Q*C 
-  printf("Computed FOM = (%e)+(%e)i.\n",
-         real(FOM->GetEntry(0,0)),imag(FOM->GetEntry(0,0)));
+  // printf("Computed FOM = (%e)+(%e)i.\n",
+  //     real(FOM->GetEntry(0,0)),imag(FOM->GetEntry(0,0)));
+  printf("Computed FOM = %e\n",FOM->GetEntryD(0,0));
   // --- if gradient value is required, use adjoint method 
   // --- M*Cadj = transpose(QPFT)*conj(C)  
   if(grad) { /*NOT DOING ANYTNING NOW*/ }

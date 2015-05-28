@@ -58,11 +58,15 @@ OBJ = objective.o OTutils.o VBeam.o
 objective: 	$(OBJ)
 		$(CXX) -Wall $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
 
+OBJST = objective.o OTutils.o VBeam.o
+objective_struct: 	$(OBJST)
+		$(CXX) -Wall $(LDFLAGS) -o $@ $(OBJST) $(LIBS)
+
 TUT = NLOPT_tutorial.o
 tutorial: 	$(TUT)
 		$(CXX) $(LDFLAGS) -o $@ $(TUT) $(LIBS2)
 
-NLOT = NLOPT_OT.o OTutils.o VBeam.o OutputModules.o
+NLOT = NLOPT_OT.o OTutils.o VBeam.o
 NLOPT_OT: 	$(NLOT)
 		$(CXX) $(LDFLAGS) -o $@ $(NLOT) $(LIBS2)
 
