@@ -6,6 +6,9 @@
  * created on 2015.03.18
  * last updated on 2015.05.27
  *--------------------------------------------------------------*/
+// each objective file should receive *OT_data
+// has a fixed geometry and frequency. 
+
 #include <stdio.h>
 #include <math.h>
 #include <complex>
@@ -22,13 +25,17 @@
 
 using namespace scuff;
 
+typedef struct{
+  char FileBase[MAXSTR]; 
+  cdouble Omega; 
+} OT_data; 
 //---------------------------------------------------------------//
 double GetIntegratedIntensity(RWGGeometry *G, int SurfaceIndex, 
                               HVector *RHSVector);
 void ShowPARMMatrix(HMatrix* PARMMatrix); 
-double objective_Qabs(unsigned n, double *x, double *grad);
-double objective_QTZ(unsigned n, double *x, double *grad);
-double objective_QFZ(unsigned n, double *x, double *grad);
+double objective_Qabs(unsigned n, double *x, double *grad, void *OT_data);
+double objective_QTZ(unsigned n, double *x, double *grad, void *OT_data);
+double objective_QFZ(unsigned n, double *x, double *grad, void *OT_data);
 //---------------------------------------------------------------//
 int main()
 // main function to test objective_Q
@@ -56,19 +63,23 @@ int main()
       x[l*5+4] = 0.0; //bi
     }
 
+  OT_data data;
+  data.Omega = 10.471975511965978; 
+  data.FileBase = snprintf(""); 
   objective_QFZ(NUML*5, x, grad); 
 
       // char MatFileName[100];
       // snprintf(MatFileName, 100, "Mat_Cadj.dat");  
       // Cadj->ExportToText(MatFileName,"--separate,"); 
-
 }
 //---------------------------------------------------------------//
 
-double objective_Qabs(unsigned n, double *x, double *grad) 
+double objective_Qabs(unsigned n, double *x, double *grad void *data) 
 // objective function for power absorption 
 {
-  // cdouble Omega = 10.471975511965978; 
+  OT_data *d = (OT_data *) data;
+  char* FileBase = d->FileBase; 
+  cdouble Omega = d->Omega; 
   //---------------------------------------------------------------//
   // char FileBase[MAXSTR]; 
   char GeoFile[MAXSTR], HDF5File[MAXSTR];
