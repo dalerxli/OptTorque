@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <libhrutil.h>
 #include <libscuff.h>
+#include <nlopt.h> 
 #include "VBeam.h" 
 
 #define II cdouble(0.0,1.0)
