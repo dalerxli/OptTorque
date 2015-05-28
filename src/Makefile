@@ -40,8 +40,7 @@ HR_LIBS = -lscuff
 ##HR_LIBS = -lscuff -lIncFieldPrime -lMatProp -lMDInterp -lhmat -lSGJC -lTriInt -lhrutil
 
 LIBS = $(HR_LIBS) $(HDF5_LIBS) $(LB_LIBS)
-LIBS2 = $(HR_LIBS) $(NLOPT_LIBS)
-
+LIBS2 = $(HR_LIBS) $(HDF5_LIBS) $(LB_LIBS) $(NLOPT_LIBS)
 
 OT = OptTorque.o OTutils.o VBeam.o GHBeam.o OutputModules.o
 OptTorque: 	$(OT)
@@ -50,10 +49,6 @@ OptTorque: 	$(OT)
 VBT = VBeamTest.o VBeam.o
 VBeamTest: 	$(VBT)
 		$(CXX) -Wall $(LDFLAGS) -o $@ $(VBT) $(LIBS)
-
-VBTM = VBeamTestMesh.o VBeam.o
-VBeamTestMesh:	$(VBTM)
-		$(CXX) -Wall $(LDFLAGS) -o $@ $(VBTM) $(LIBS)
 
 GBT = GHBeamTest.o GHBeam.o
 GHBeamTest: 	$(GBT)
@@ -66,6 +61,10 @@ objective: 	$(OBJ)
 TUT = NLOPT_tutorial.o
 tutorial: 	$(TUT)
 		$(CXX) $(LDFLAGS) -o $@ $(TUT) $(LIBS2)
+
+NLOT = NLOPT_OT.o OTutils.o VBeam.o OutputModules.o
+NLOPT_OT: 	$(NLOT)
+		$(CXX) $(LDFLAGS) -o $@ $(NLOT) $(LIBS2)
 
 clean:
 		rm *.o 

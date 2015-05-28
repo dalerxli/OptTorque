@@ -17,12 +17,11 @@
 
 #define II cdouble(0.0,1.0)
 #define NUML 5
-#define MAXSTR 100 
+#define MAXSTR 100  
 #define FileBase "N3_400nm_Mesh60nm" 
 #define Omega cdouble(10.471975511965978,0.0)
 
 using namespace scuff;
-
 //---------------------------------------------------------------//
 double GetIntegratedIntensity(RWGGeometry *G, int SurfaceIndex, 
                               HVector *RHSVector);
@@ -31,12 +30,13 @@ double objective_Qabs(unsigned n, double *x, double *grad);
 double objective_QTZ(unsigned n, double *x, double *grad);
 double objective_QFZ(unsigned n, double *x, double *grad);
 //---------------------------------------------------------------//
-int main()
-// main function to test objective_Q
+int main(int argc, char *argv[])
+// main function to test objective
 {
-  // create a vector x to test. 
-  double x[NUML*5]; 
-  double grad[NUML*5]; 
+  int n = NUML*5; 
+  double x[n];   // create a vector x to test. 
+  double grad[n];// create grad (dFOM/dx) 
+
   for (int l = 0; l<NUML; l++)
     {
       x[l*5] = 10.0;  //alpha 
@@ -46,7 +46,7 @@ int main()
       x[l*5+4] = 0.0; //bi
     }
 
-  objective_QFZ(NUML*5, x, grad); 
+  objective_QFZ(n, x, grad); 
 
   for (int l = 0; l<NUML; l++)
     {
@@ -56,16 +56,13 @@ int main()
       x[l*5+3] = 0.0; //ai
       x[l*5+4] = 0.0; //bi
     }
-
-  objective_QFZ(NUML*5, x, grad); 
+  objective_QFZ(n, x, grad); 
 
       // char MatFileName[100];
       // snprintf(MatFileName, 100, "Mat_Cadj.dat");  
       // Cadj->ExportToText(MatFileName,"--separate,"); 
-
 }
 //---------------------------------------------------------------//
-
 double objective_Qabs(unsigned n, double *x, double *grad) 
 // objective function for power absorption 
 {
@@ -76,9 +73,9 @@ double objective_Qabs(unsigned n, double *x, double *grad)
   //snprintf(FileBase,MAXSTR,"N3_400nm_Mesh60nm"); 
   snprintf(GeoFile,MAXSTR,"%s.scuffgeo",FileBase);  
   snprintf(HDF5File,MAXSTR,"%s.HDF5",FileBase ); 
-  // I want the GeoFile and HDF5File to search for *.scuffgeo and *.HDF5 in the dir. 
+
   RWGGeometry *G = new RWGGeometry(GeoFile);
-  Log(" Created RWGGeometry G...\n");
+  printf(" Created RWGGeometry G...\n");
   //---------------------------------------------------------------//
   HMatrix *MLU = new HMatrix(HDF5File, LHM_HDF5, "MLU");
   if (MLU->ErrMsg) ErrExit(MLU->ErrMsg);
@@ -91,11 +88,11 @@ double objective_Qabs(unsigned n, double *x, double *grad)
   // HMatrix *QTZOPFT = new HMatrix(HDF5File, LHM_HDF5, "QTZOPFT");
   // if (QTZOPFT->ErrMsg) ErrExit(QTZOPFT->ErrMsg);
   printf("size of Q is : %i by %i\n",QabsOPFT->NR,QabsOPFT->NC);   
-  Log(" Successfully imported all matrices...\n");
+  printf(" Successfully imported all matrices...\n");
   //---------------------------------------------------------------//
 
   // --- initialize RHS vectors and IF from double *x. 
-  Log("  Assembling the RHS vector...");
+  printf("  Assembling the RHS vector...");
   HVector* KN1=new HVector(NR,LHM_COMPLEX); 
   HMatrix* PMatrix=new HMatrix(NUML,6,LHM_REAL); 
   double cnorm[NUML]; 
@@ -106,7 +103,7 @@ double objective_Qabs(unsigned n, double *x, double *grad)
     IncField *IF1 = new VBeam(l,x[l*5]);     // initialize with VBeam = 1*M; 
     G->AssembleRHSVector(Omega, IF1, KN1);   // KN1 is formed here
     cnorm[l]=GetIntegratedIntensity(G, 0, KN1); // get cnorm for each (l,aIn)
-
+    printf("cnorm[%d]=%e\n",l,cnorm[l]);
     // create a big PMatrix with each row corresponding to one mode 
     // normalize ar,br,ai,bi
     PMatrix->SetEntry(l,0,l); 
@@ -180,10 +177,17 @@ double objective_Qabs(unsigned n, double *x, double *grad)
   delete KN1, PMatrix, KN, RHS, TEMPMAT, FOM, IF, C, Q, Cconj; 
   return FOM->GetEntryD(0,0); 
 }//end objective 
-
 //---------------------------------------------------------------//
-double objective_QTZ(unsigned n, double *x, double *grad) 
+double objective_QTZ(unsigned n, double *x, double *grad, void *data) 
 {
+  // OT_data *d=(OT_data *) data; 
+  // cdouble Omega=d->Omega; 
+  // char FileBase[MAXSTR];
+  // strncpy(FileBase,d->FileBase,MAXSTR); 
+  // char QName[MAXSTR]; 
+  // strncpy(QName,d->QName,MAXSTR); 
+
+
   // cdouble Omega = 10.471975511965978; 
   //---------------------------------------------------------------//
   // char FileBase[MAXSTR]; 
@@ -193,7 +197,7 @@ double objective_QTZ(unsigned n, double *x, double *grad)
   snprintf(HDF5File,MAXSTR,"%s.HDF5",FileBase ); 
   // I want the GeoFile and HDF5File to search for *.scuffgeo and *.HDF5 in the dir. 
   RWGGeometry *G = new RWGGeometry(GeoFile);
-  Log(" Created RWGGeometry G...\n");
+  printf(" Created RWGGeometry G...\n");
   //---------------------------------------------------------------//
   HMatrix *MLU = new HMatrix(HDF5File, LHM_HDF5, "MLU");
   if (MLU->ErrMsg) ErrExit(MLU->ErrMsg);
@@ -206,12 +210,10 @@ double objective_QTZ(unsigned n, double *x, double *grad)
   HMatrix *QTZOPFT = new HMatrix(HDF5File, LHM_HDF5, "QTZOPFT");
   if (QTZOPFT->ErrMsg) ErrExit(QTZOPFT->ErrMsg);
   printf("size of Q is : %i by %i\n",QTZOPFT->NR,QTZOPFT->NC);   
-  Log(" Successfully imported all matrices...\n");
+  printf(" Successfully imported all matrices...\n");
   //---------------------------------------------------------------//
- 
-
-  // --- initialize RHS vectors and IF from double *x. 
-  Log("  Assembling the RHS vector...");
+   // --- initialize RHS vectors and IF from double *x. 
+  printf("  Assembling the RHS vector...");
   HVector* KN1=new HVector(NR,LHM_COMPLEX); 
   HMatrix* PMatrix=new HMatrix(NUML,6,LHM_REAL); 
   double cnorm[NUML]; 
@@ -222,7 +224,7 @@ double objective_QTZ(unsigned n, double *x, double *grad)
     IncField *IF1 = new VBeam(l,x[l*5]);     // initialize with VBeam = 1*M; 
     G->AssembleRHSVector(Omega, IF1, KN1);   // KN1 is formed here
     cnorm[l]=GetIntegratedIntensity(G, 0, KN1); // get cnorm for each (l,aIn)
-
+    printf("cnorm[%d]=%e\n",l,cnorm[l]);
     // create a big PMatrix with each row corresponding to one mode 
     // normalize ar,br,ai,bi
     PMatrix->SetEntry(l,0,l); 
@@ -280,8 +282,10 @@ double objective_QFZ(unsigned n, double *x, double *grad)
   snprintf(GeoFile,MAXSTR,"%s.scuffgeo",FileBase);  
   snprintf(HDF5File,MAXSTR,"%s.HDF5",FileBase ); 
   // I want the GeoFile and HDF5File to search for *.scuffgeo and *.HDF5 in the dir. 
+  //  printf("Filebase check: %s",FileBase); 
+  // printf("Geofile: %s \n",GeoFile);
   RWGGeometry *G = new RWGGeometry(GeoFile);
-  Log(" Created RWGGeometry G...\n");
+  printf(" Created RWGGeometry G...\n");
   //---------------------------------------------------------------//
   HMatrix *MLU = new HMatrix(HDF5File, LHM_HDF5, "MLU");
   if (MLU->ErrMsg) ErrExit(MLU->ErrMsg);
@@ -294,22 +298,26 @@ double objective_QFZ(unsigned n, double *x, double *grad)
   // HMatrix *QTZOPFT = new HMatrix(HDF5File, LHM_HDF5, "QTZOPFT");
   // if (QTZOPFT->ErrMsg) ErrExit(QTZOPFT->ErrMsg);
   printf("size of Q is : %i by %i\n",QFZOPFT->NR,QFZOPFT->NC);   
-  Log(" Successfully imported all matrices...\n");
+  printf(" Successfully imported all matrices...\n");
   //---------------------------------------------------------------//
  
   // --- initialize RHS vectors and IF from double *x. 
-  Log("  Assembling the RHS vector...");
+  printf("  Assembling the RHS vector...");
   HVector* KN1=new HVector(NR,LHM_COMPLEX); 
   HMatrix* PMatrix=new HMatrix(NUML,6,LHM_REAL); 
   double cnorm[NUML]; 
   // KN1=G->AllocateRHSVector();
+
   for (int l; l<NUML; l++){
+
     // for each l, compute cnorm[l]
     // IncField *IF1 = new VBeam(l,x[l*5],x[l*5+1],x[l*5+2],x[l*5+3],x[l*5+4]); 
     IncField *IF1 = new VBeam(l,x[l*5]);     // initialize with VBeam = 1*M; 
+    //printf("Inside l loop \n"); 
     G->AssembleRHSVector(Omega, IF1, KN1);   // KN1 is formed here
-    cnorm[l]=GetIntegratedIntensity(G, 0, KN1); // get cnorm for each (l,aIn)
 
+    cnorm[l]=GetIntegratedIntensity(G, 0, KN1); // get cnorm for each (l,aIn)
+    //printf("cnorm[%d]=%e\n",l,cnorm[l]);
     // create a big PMatrix with each row corresponding to one mode 
     // normalize ar,br,ai,bi
     PMatrix->SetEntry(l,0,l); 
