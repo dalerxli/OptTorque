@@ -1,0 +1,16 @@
+SHELL=/bin/bash
+
+NLOPT=$(HOME)/git/nlopt-installation
+
+CPPFLAGS+=-I$(NLOPT)/include
+LDFLAGS+=-L$(NLOPT)/lib 
+
+LIBS+=-lnlopt -lm 
+##################################################	
+TUT = NLOPT_tutorial.o
+tutorial: 	$(TUT)
+		$(CXX) $(LDFLAGS) -o $@ $(TUT) $(LIBS)
+
+
+clean:
+		rm *.o 
