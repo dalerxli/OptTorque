@@ -25,7 +25,6 @@ using namespace scuff;
 //---------------------------------------------------------------//
 double GetIntegratedIntensity(RWGGeometry *G, int SurfaceIndex, 
                               HVector *RHSVector);
-void ShowPARMMatrix(HMatrix* PARMMatrix); 
 double objective_Qabs(unsigned n, double *x, double *grad);
 double objective_QTZ(unsigned n, double *x, double *grad);
 double objective_QFZ(unsigned n, double *x, double *grad);
@@ -96,8 +95,7 @@ double objective_Qabs(unsigned n, double *x, double *grad)
   HVector* KN1=new HVector(NR,LHM_COMPLEX); 
   HMatrix* PMatrix=new HMatrix(NUML,6,LHM_REAL); 
   double cnorm[NUML]; 
-  // KN1=G->AllocateRHSVector();
-  for (int l; l<NUML; l++){
+  for (int l=0; l<NUML; l++){
     // for each l, compute cnorm[l]
     // IncField *IF1 = new VBeam(l,x[l*5],x[l*5+1],x[l*5+2],x[l*5+3],x[l*5+4]); 
     IncField *IF1 = new VBeam(l,x[l*5]);     // initialize with VBeam = 1*M; 
@@ -216,9 +214,8 @@ double objective_QTZ(unsigned n, double *x, double *grad, void *data)
   printf("  Assembling the RHS vector...");
   HVector* KN1=new HVector(NR,LHM_COMPLEX); 
   HMatrix* PMatrix=new HMatrix(NUML,6,LHM_REAL); 
-  double cnorm[NUML]; 
-  // KN1=G->AllocateRHSVector();
-  for (int l; l<NUML; l++){
+  double cnorm[NUML];
+  for (int l=0; l<NUML; l++){
     // for each l, compute cnorm[l]
     // IncField *IF1 = new VBeam(l,x[l*5],x[l*5+1],x[l*5+2],x[l*5+3],x[l*5+4]); 
     IncField *IF1 = new VBeam(l,x[l*5]);     // initialize with VBeam = 1*M; 
@@ -235,8 +232,6 @@ double objective_QTZ(unsigned n, double *x, double *grad, void *data)
     PMatrix->SetEntry(l,5,x[l*5+4]/cnorm[l]); 
     delete IF1; 
   }
-  //ShowPARMMatrix(PMatrix);
-
   // --- allocate necessary vectors and matrices
   HVector* KN=new HVector(NR,LHM_COMPLEX); 
   HVector* RHS=new HVector(NR,LHM_COMPLEX); 
@@ -306,16 +301,11 @@ double objective_QFZ(unsigned n, double *x, double *grad)
   HVector* KN1=new HVector(NR,LHM_COMPLEX); 
   HMatrix* PMatrix=new HMatrix(NUML,6,LHM_REAL); 
   double cnorm[NUML]; 
-  // KN1=G->AllocateRHSVector();
-
-  for (int l; l<NUML; l++){
-
+  for (int l=0; l<NUML; l++){
     // for each l, compute cnorm[l]
     // IncField *IF1 = new VBeam(l,x[l*5],x[l*5+1],x[l*5+2],x[l*5+3],x[l*5+4]); 
-    IncField *IF1 = new VBeam(l,x[l*5]);     // initialize with VBeam = 1*M; 
-    //printf("Inside l loop \n"); 
+    IncField *IF1 = new VBeam(l,x[l*5]);     // initialize with VBeam = 1*M;  
     G->AssembleRHSVector(Omega, IF1, KN1);   // KN1 is formed here
-
     cnorm[l]=GetIntegratedIntensity(G, 0, KN1); // get cnorm for each (l,aIn)
     //printf("cnorm[%d]=%e\n",l,cnorm[l]);
     // create a big PMatrix with each row corresponding to one mode 
@@ -328,8 +318,6 @@ double objective_QFZ(unsigned n, double *x, double *grad)
     PMatrix->SetEntry(l,5,x[l*5+4]/cnorm[l]); 
     delete IF1; 
   }
-  //ShowPARMMatrix(PMatrix);
-
   // --- allocate necessary vectors and matrices
   HVector* KN=new HVector(NR,LHM_COMPLEX); 
   HVector* RHS=new HVector(NR,LHM_COMPLEX); 

@@ -22,7 +22,7 @@ using namespace scuff;
 // uses objective function and struct OT_data
 double GetIntegratedIntensity(RWGGeometry *G, int SurfaceIndex, 
                               HVector *RHSVector);
-double objective(unsigned n, double *x, double *grad, void *data);
+double objective(unsigned n, const double *x, double *grad, void *data);
 //---------------------------------------------------------------//
 typedef struct {
   cdouble Omega;//frequency (has to be real although in cdouble)
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
   }
   nlopt_set_lower_bounds(opt, lb);  // set lower bounds 
   nlopt_set_upper_bounds(opt, ub); 
-  nlopt_set_min_objective(opt, objective, data);
+  nlopt_set_min_objective(opt, objective, NULL);
 
   //---------------------------------------------------------------//
   // --- perform optimization 
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 //---------------------------------------------------------------//
 //---------------------------------------------------------------//
 //---------------------------------------------------------------//
-double objective(unsigned n, double *x, double *grad, void *data)
+double objective(unsigned n, const double *x, double *grad, void *data)
 // objective function for derivative-free optimization 
 {
   OT_data *d = (OT_data *)data; 
@@ -116,7 +116,7 @@ double objective(unsigned n, double *x, double *grad, void *data)
   HMatrix* PMatrix=new HMatrix(NUML,6,LHM_REAL); 
   
   double cnorm[NUML]; 
-  for (int l; l<NUML; l++){
+  for (int l=0; l<NUML; l++){
     // for each l, compute cnorm[l]
     // IncField *IF1 = new VBeam(l,x[l*5],x[l*5+1],x[l*5+2],x[l*5+3],x[l*5+4]); 
     IncField *IF1 = new VBeam(l,x[l*5]);     // initialize with VBeam = 1*M; 

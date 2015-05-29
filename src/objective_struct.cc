@@ -98,7 +98,7 @@ double objective(unsigned n, double *x, double *grad, void *data)
   HMatrix* PMatrix=new HMatrix(NUML,6,LHM_REAL); 
   
   double cnorm[NUML]; 
-  for (int l; l<NUML; l++){
+  for (int l=0; l<NUML; l++){
     // for each l, compute cnorm[l]
     // IncField *IF1 = new VBeam(l,x[l*5],x[l*5+1],x[l*5+2],x[l*5+3],x[l*5+4]); 
     IncField *IF1 = new VBeam(l,x[l*5]);     // initialize with VBeam = 1*M; 
